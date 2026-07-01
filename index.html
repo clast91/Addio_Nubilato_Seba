@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Triplan</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>Triplan</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
 :root {
   --bg:#F7F5F0;--surface:#FFFFFF;--surface2:#F0EDE6;--surface3:#E8E4DC;
   --nav-bg:#1E2A35;--nav-text:#C8D4DF;--nav-active:#FFFFFF;
@@ -378,18 +378,124 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 
 #mobile-day-bar{display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;flex-shrink:0}
 #mobile-day-bar select{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text);outline:none}
+/* ── Mobile Optimization ── */
 @media(max-width:700px){
-  #sidebar{display:none}
-  #form-panel,#cats-panel,#io-panel,#settings-panel,#lodging-panel,#expense-panel{width:100%}
-  #mobile-day-bar{display:flex}
-  #view-day{padding:16px}
-  .trips-grid{grid-template-columns:1fr}
-  #view-trips{padding:20px 16px}
+  /* Hide sidebar completely on phones */
+  #sidebar{display:none !important}
+  
+  /* Make main content take full width */
+  #main{flex-direction:column}
+  #views{flex:1}
+  
+  /* Top navigation - more compact */
+  #topnav{
+    height:52px;
+    padding:0 12px;
+    gap:4px;
+  }
+  #topnav .logo{font-size:16px}
+  .nav-btn{
+    padding:5px 8px;
+    font-size:12px;
+    gap:4px;
+  }
+  .nav-btn svg{width:14px;height:14px}
+  
+  /* Mobile day selector */
+  #mobile-day-bar{
+    display:flex;
+    padding:8px 12px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+  }
+  #mobile-day-select{
+    width:100%;
+    padding:8px 12px;
+    font-size:14px;
+    border-radius:8px;
+  }
+  
+  /* Day view */
+  #view-day{
+    padding:16px 14px;
+  }
+  .day-header{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .day-header-actions{
+    width:100%;
+  }
+  
+  /* Activity tiles - bigger touch targets */
+  .activity-tile{
+    padding:14px 12px;
+    gap:10px;
+  }
+  .tile-number{
+    width:24px;
+    height:24px;
+    font-size:11px;
+  }
+  .tile-actions{
+    flex-direction:column;
+    align-items:stretch;
+    gap:6px;
+  }
+  .tile-action-btn{
+    padding:9px 12px;
+    font-size:13px;
+    justify-content:center;
+  }
+  
+  /* Forms - full width */
+  #form-panel,
+  #cats-panel,
+  #io-panel,
+  #settings-panel,
+  #lodging-panel,
+  #expense-panel{
+    width:100% !important;
+  }
+  
   .form-row{grid-template-columns:1fr}
-  #topnav .logo span{display:none}
-  .lodging-banner{flex-wrap:wrap}
+  
+  /* Map improvements */
+  #map-container{height:calc(100% - 50px) !important}
+  #map-day-toggle{
+    top:8px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:12px;
+  }
+  
+  /* Lodging banner */
+  .lodging-banner{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+  }
+  
+  /* Trips grid */
+  .trips-grid{grid-template-columns:1fr; gap:12px}
+  #view-trips{padding:16px 14px}
+  
+  /* Smaller modals & overlays */
+  .modal{max-width:94vw}
+  .lock-box{max-width:340px; padding:28px 24px}
+  
+  /* Improve scroll areas */
+  #activities-list,
+  #view-day,
+  #exp-list{
+    -webkit-overflow-scrolling:touch;
+  }
+  
+  /* Hide less important elements */
+  .reorder-hint{font-size:10px}
 }
-
+  
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1E2A35;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9000;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
