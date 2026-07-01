@@ -384,27 +384,29 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
   #main{flex-direction:column}
   #views{flex:1}
   
-  /* Fixed Top Nav — never scrolls */
+  /* Fixed Top Nav — never scrolls, overflow visible so kebab menu can escape */
   #topnav{
     position: sticky;
     top: 0;
     z-index: 2500;
     height:auto;
     min-height:48px;
-    padding:6px 8px;
-    gap:2px;
-    overflow-x:auto;
-    overflow-y:hidden;
+    padding:4px 6px;
+    gap:1px;
+    overflow:visible;
     flex-wrap:nowrap;
     flex-shrink:0;
     background:var(--nav-bg);
-    -webkit-overflow-scrolling:touch;
   }
+  /* Trip name hidden on mobile to save space */
+  #trip-name-display{display:none !important}
+  /* Kebab drops below nav, high z-index, not clipped by parent */
   #kebab-menu{
-    z-index:3000;
     position:fixed;
-    top:54px;
+    top:52px;
     right:4px;
+    z-index:9500;
+    min-width:210px;
   }
   
   #topnav .logo{font-size:15px}
@@ -427,38 +429,56 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
   }
   .form-row{grid-template-columns:1fr}
   
+  /* Map controls: toggle on top row, day selector below it — no overlap */
   #map-day-toggle{
     top:8px;
-    z-index:1200;
     left:50%;
     transform:translateX(-50%);
+    z-index:1200;
     display:flex !important;
   }
-  .map-toggle-btn{padding:6px 12px;font-size:12px}
+  .map-toggle-btn{padding:5px 11px;font-size:12px}
   #map-day-switcher{
-    top:8px;
-    right:8px;
-    padding:5px 8px;
+    top:46px;
+    right:auto;
+    left:50%;
+    transform:translateX(-50%);
+    padding:4px 10px;
+    z-index:1200;
   }
   #map-day-switcher select{font-size:12px}
   #map-container{height:100% !important}
-  #map-detail{max-height:60%}
+  #map-detail{max-height:65%}
 }   
     /* Hide less important elements */
   .reorder-hint{font-size:10px}
 
 /* Toast */
+.sync-badge{
+  font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;
+  letter-spacing:.03em;margin-right:4px;transition:all .2s;white-space:nowrap;
+}
+.sync-badge.saving{background:rgba(255,255,255,.15);color:#fff;animation:pulse 1s infinite}
+.sync-badge .sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;margin-right:5px;animation:pulse 1s infinite;vertical-align:middle}
+.sync-badge.saved{background:rgba(45,122,79,.35);color:#7EE8A2}
+.sync-badge.error{background:rgba(192,57,43,.35);color:#FF8A80}
+.sync-badge.no-pat{background:rgba(255,160,0,.25);color:#FFD54F}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1E2A35;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9000;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* Hide GitHub Pages bottom bar and any injected iframes/overlays */
-body > iframe[src*="github"], 
-body > div[style*="position: fixed"][style*="bottom"],
+/* Hide GitHub Pages injected bar */
+body > iframe,
+body > div[style*="position: fixed"],
+body > div[style*="position:fixed"],
 .js-cookie-consent,
-#github-pages-custom-domain-info {
+#github-pages-custom-domain-info,
+[class*="github-pages"],
+[id*="github-pages"] {
   display: none !important;
   height: 0 !important;
   overflow: hidden !important;
+  pointer-events: none !important;
 }
 </style>
 </head>
@@ -512,6 +532,7 @@ body > div[style*="position: fixed"][style*="bottom"],
       </button>
     </div>
     <span id="mode-badge" class="view">VIEW</span>
+    <span id="sync-badge" class="sync-badge" style="display:none"></span>
     <div class="menu-wrap">
       <button id="kebab-btn" onclick="toggleKebab(event)" title="Menu">
         <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
@@ -936,6 +957,10 @@ const DEFAULT_CATS=[
 const DAY_COLORS=['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
 const LODGING_COLOR='#2D6A8A';
 const DEFAULT_HASH_VIEW='2f920298843c29f4e6092b9acc5fb979bbb336ceb56f68013bf3e472f0f87e9f';
+const GH_OWNER='clast91';
+const GH_REPO='Addio_Nubilato_Seba';
+const GH_FILE='The_Final_Rota.json';
+const GH_BRANCH='main';
 const DEFAULT_HASH_ADMIN='417555d4d42765c3f2a2a737c1dcc64447ddc6f6e9dcf0ee73a1cb45f94ed300';
 
 function uid(){return'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)}
@@ -960,8 +985,68 @@ let currentMapMode='day',currentMapDayIdx=0;
 let transportSelected=[];
 let lodgingScope='trip';
 let dragSrcIdx=null;
+let ghFileSha=null; // current SHA of the file on GitHub, needed for PUT
+let syncTimeout=null;
 
-function save(){localStorage.setItem('triplan_data',JSON.stringify(state))}
+function save(){
+  localStorage.setItem('triplan_data',JSON.stringify(state));
+  if(isAdmin())scheduleGHPush();
+}
+function scheduleGHPush(){
+  if(syncTimeout)clearTimeout(syncTimeout);
+  syncTimeout=setTimeout(pushToGitHub,600); // debounce 600ms
+}
+async function pushToGitHub(){
+  const pat='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';
+  setSyncStatus('saving');
+  try{
+    const tr=currentTrip();
+    const payload={
+      _triplan_export:'trip',
+      version:2,
+      trip:JSON.parse(JSON.stringify(tr||state.trips[0]||{})),
+      categories:state.categories
+    };
+    const body={
+      message:'Triplan: update via admin',
+      content:btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2)))),
+      branch:GH_BRANCH
+    };
+    if(ghFileSha)body.sha=ghFileSha;
+    const res=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`,{
+      method:'PUT',
+      headers:{
+        'Authorization':`token ${pat}`,
+        'Content-Type':'application/json',
+        'Accept':'application/vnd.github+json'
+      },
+      body:JSON.stringify(body)
+    });
+    if(!res.ok){
+      const err=await res.json();
+      console.error('GitHub push failed:',err);
+      setSyncStatus('error',err.message||res.status);
+      return;
+    }
+    const data=await res.json();
+    ghFileSha=data.content?.sha||ghFileSha;
+    setSyncStatus('saved');
+  }catch(e){
+    console.error('GitHub push error:',e);
+    setSyncStatus('error',e.message);
+  }
+}
+function setSyncStatus(status,msg=''){
+  const badge=document.getElementById('sync-badge');
+  if(!badge)return;
+  badge.className='sync-badge '+status;
+  if(status==='saving')badge.innerHTML='<span class="sync-dot"></span>Saving…';
+  else if(status==='saved')badge.innerHTML='✓ Saved';
+  else if(status==='error')badge.innerHTML='✗ Failed';
+  else if(status==='no-pat')badge.innerHTML='⚠ No PAT';
+  else badge.innerHTML='';
+  badge.title=msg;
+}
 function load(){
   const d=localStorage.getItem('triplan_data');
   if(d){const p=JSON.parse(d);state.trips=p.trips||[];state.categories=p.categories||[...DEFAULT_CATS];}
@@ -1023,6 +1108,8 @@ function applyModeUI(){
     tnd.title=isAdmin()?'Click to edit name & date':'';
     tnd.classList.toggle('editable',isAdmin());
   }
+  const sb=document.getElementById('sync-badge');
+  if(sb)sb.style.display=isAdmin()?'':'none';
 }
 
 function lockApp(){
@@ -2231,47 +2318,65 @@ document.getElementById('admin-login-overlay').addEventListener('click',e=>{if(e
 // ─────────────────────────────────────────────────────────────────────────
 // Load data from GitHub JSON (always fresh)
 // ─────────────────────────────────────────────────────────────────────────
-async function loadRotaFromJSON() {
-    try {
-        console.log("Fetching The_Final_Rota.json...");
-        const response = await fetch('The_Final_Rota.json', { cache: 'no-store' });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("✅ JSON loaded:", data.trip?.name);
-
-        if (data._triplan_export === "trip" && data.trip) {
-            state.trips = [data.trip];
-            if (data.categories) state.categories = data.categories;
-            
-            currentTripId = data.trip.id;
-            
-            renderTripsGrid();
-            showTrips();
-            
-    
-            console.log("Trip loaded with", data.trip.days.length, "days");
-        } else {
-            showToast('JSON loaded but wrong format');
-        }
-    } catch (err) {
-        console.error("Load failed:", err);
-        showToast('❌ Could not load JSON — check console');
-        
-        // Fallback: show empty state
-        renderTripsGrid();
+async function loadRotaFromJSON(){
+  setSyncStatus('saving');
+  try{
+    // Always fetch fresh JSON from GitHub (source of truth for everyone)
+    const res=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`,{
+      headers:{
+        'Accept':'application/vnd.github+json',
+        'Cache-Control':'no-cache'
+      }
+    });
+    if(!res.ok)throw new Error(`GitHub API ${res.status}`);
+    const meta=await res.json();
+    ghFileSha=meta.sha; // capture SHA for later writes
+    const content=decodeURIComponent(escape(atob(meta.content.replace(/\n/g,''))));
+    const data=JSON.parse(content);
+    if(data._triplan_export==='trip'&&data.trip){
+      state.trips=[data.trip];
+      if(data.categories)state.categories=data.categories;
+      currentTripId=data.trip.id;
+      console.log('✅ JSON loaded:',data.trip.name,'SHA:',ghFileSha);
+      setSyncStatus('saved');
+    }else{
+      throw new Error('Wrong format');
     }
+  }catch(err){
+    console.error('Load failed:',err);
+    setSyncStatus('error',err.message);
+    showToast('⚠ Could not load trip data — check connection');
+  }
+  applyModeUI();
+  renderTripsGrid();
+  // Auto-open the trip
+  if(state.trips.length===1&&currentTripId){
+    openTrip(currentTripId);
+  }else{
+    showTrips();
+  }
 }
 </script>
 <script>
-// Remove GitHub Pages injected UI elements
+// Remove GitHub Pages injected UI elements aggressively
 (function removeGHInjected(){
-  const sel='iframe[src*="github.com"],div[data-testid="footer"],#github-pages-status';
-  const clean=()=>document.querySelectorAll(sel).forEach(el=>el.remove());
-  clean();new MutationObserver(clean).observe(document.body,{childList:true,subtree:false});
+  function clean(){
+    document.querySelectorAll(
+      'body > iframe, body > div[style*="position: fixed"], body > div[style*="position:fixed"]'
+    ).forEach(el=>{
+      // Don't remove our own UI elements
+      const id=el.id||'';
+      if(id==='lockscreen'||id==='app'||id==='modal-overlay'||id==='admin-login-overlay'||id==='form-overlay'||id==='toast')return;
+      el.style.display='none';
+      el.style.height='0';
+      el.style.overflow='hidden';
+    });
+  }
+  clean();
+  new MutationObserver(clean).observe(document.body,{childList:true,subtree:false});
+  // Also run after a short delay as GitHub injects lazily
+  setTimeout(clean,500);
+  setTimeout(clean,2000);
 })();
 </script>
 </body>
