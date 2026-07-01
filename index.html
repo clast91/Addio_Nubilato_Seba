@@ -197,10 +197,9 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 .badge-offmap{background:var(--surface3);color:var(--text-2)}
 .tile-drag-handle{
   cursor:grab;color:var(--text-3);padding:2px;line-height:1;
-  user-select:none;touch-action:none;display:flex;align-items:center;
-  width:14px;overflow:hidden;flex-shrink:0;opacity:.5;
+  user-select:none;touch-action:none;width:16px;flex-shrink:0;overflow:hidden;
 }
-.tile-drag-handle:active{cursor:grabbing;opacity:.8}
+.tile-drag-handle:active{cursor:grabbing}
 .tile-body{flex:1;min-width:0}
 .tile-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .badge{font-size:11px;font-weight:500;padding:3px 8px;border-radius:20px;display:inline-flex;align-items:center;gap:3px}
@@ -414,6 +413,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
     min-width:210px;
     max-height:calc(100vh - 60px);
     overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
   }
   
   #topnav .logo{font-size:15px}
@@ -1004,27 +1004,10 @@ function scheduleGHPush(){
   syncTimeout=setTimeout(pushToGitHub,600); // debounce 600ms
 }
 async function pushToGitHub(){
-  // Token stored obfuscated — decoded at runtime only
   const _k=42,_e=[77,66,90,117,109,65,18,77,96,70,78,115,66,28,124,64,89,123,77,69,102,102,120,27,104,24,107,125,107,105,70,121,91,80,24,71,71,79,111,108];
   const pat=_e.map(b=>String.fromCharCode(b^_k)).join('');
   setSyncStatus('saving');
   try{
-    // Always fetch latest SHA before writing to avoid 422 conflicts
-    {
-      console.log('Fetching SHA from GitHub API…');
-      const shaRes=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`,{
-        headers:{'Authorization':`token ${pat}`,'Accept':'application/vnd.github+json'}
-      });
-      console.log('SHA fetch status:',shaRes.status);
-      if(shaRes.ok){
-        const shaData=await shaRes.json();
-        ghFileSha=shaData.sha;
-        console.log('Got SHA:',ghFileSha);
-      }else{
-        const errBody=await shaRes.text().catch(()=>'');
-        throw new Error(`SHA fetch failed: ${shaRes.status} ${errBody.slice(0,100)}`);
-      }
-    }
     const tr=currentTrip();
     const payload={
       _triplan_export:'trip',
@@ -1034,8 +1017,7 @@ async function pushToGitHub(){
     };
     const body={
       message:'Triplan: update via admin',
-      // Proper UTF-8 base64 encode (handles Italian/accented chars)
-      content:(()=>{const str=JSON.stringify(payload,null,2);const bytes=new TextEncoder().encode(str);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);})(),
+      content:btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2)))),
       branch:GH_BRANCH
     };
     if(ghFileSha)body.sha=ghFileSha;
@@ -1049,17 +1031,16 @@ async function pushToGitHub(){
       body:JSON.stringify(body)
     });
     if(!res.ok){
-      let errText='';
-      try{const err=await res.json();errText=JSON.stringify(err);}catch(_){errText=await res.text().catch(()=>'');}
-      console.error('GitHub push failed — status:',res.status,'body:',errText);
-      setSyncStatus('error',`${res.status}: ${errText.slice(0,120)}`);
+      const err=await res.json();
+      console.error('GitHub push failed:',err);
+      setSyncStatus('error',err.message||res.status);
       return;
     }
     const data=await res.json();
     ghFileSha=data.content?.sha||ghFileSha;
     setSyncStatus('saved');
   }catch(e){
-    console.error('GitHub push error — type:',e.name,'message:',e.message,'stack:',e.stack);
+    console.error('GitHub push error:',e);
     setSyncStatus('error',e.message);
   }
 }
@@ -1069,10 +1050,10 @@ function setSyncStatus(status,msg=''){
   badge.className='sync-badge '+status;
   if(status==='saving')badge.innerHTML='<span class="sync-dot"></span>Saving…';
   else if(status==='saved')badge.innerHTML='✓ Saved';
-  else if(status==='error'){badge.innerHTML='✗ Failed';if(msg)console.error('Sync error detail:',msg);}
+  else if(status==='error')badge.innerHTML='✗ Failed';
   else if(status==='no-pat')badge.innerHTML='⚠ No PAT';
   else badge.innerHTML='';
-  badge.title=msg||'';
+  badge.title=msg;
 }
 function load(){
   const d=localStorage.getItem('triplan_data');
@@ -1469,7 +1450,7 @@ function renderDay(){
         ${isAdmin()?`ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dragDrop(event)" ondragend="dragEnd(event)" ondragleave="dragLeave(event)"`:''}>
       <div class="tile-number-col">
         ${onMap?`<div class="tile-number" style="background:${color}">${mapNum}</div>`:`<div class="tile-number tile-number-offmap" title="Not shown on map">−</div>`}
-        ${isAdmin()?`<span class="tile-drag-handle" title="Drag to reorder"><svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="3" cy="2" r="1.5"/><circle cx="7" cy="2" r="1.5"/><circle cx="3" cy="6" r="1.5"/><circle cx="7" cy="6" r="1.5"/><circle cx="3" cy="10" r="1.5"/><circle cx="7" cy="10" r="1.5"/><circle cx="3" cy="14" r="1.5"/><circle cx="7" cy="14" r="1.5"/></svg></span>`:''}
+        ${isAdmin()?`<span class="tile-drag-handle" title="Drag to reorder"><svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" style="opacity:.4"><circle cx="3" cy="2" r="1.5"/><circle cx="7" cy="2" r="1.5"/><circle cx="3" cy="6" r="1.5"/><circle cx="7" cy="6" r="1.5"/><circle cx="3" cy="10" r="1.5"/><circle cx="7" cy="10" r="1.5"/><circle cx="3" cy="14" r="1.5"/><circle cx="7" cy="14" r="1.5"/></svg></span>`:''}
       </div>
       <div class="tile-body">
         <div class="tile-badges">
@@ -2348,29 +2329,16 @@ document.getElementById('admin-login-overlay').addEventListener('click',e=>{if(e
 async function loadRotaFromJSON(){
   setSyncStatus('saving');
   try{
-    // Use GitHub API with auth — always returns fresh data, bypasses CDN cache
-    const _k=42,_e=[77,66,90,117,109,65,18,77,96,70,78,115,66,28,124,64,89,123,77,69,102,102,120,27,104,24,107,125,107,105,70,121,91,80,24,71,71,79,111,108];
-    const _pat=_e.map(b=>String.fromCharCode(b^_k)).join('');
-    const res=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`,{
-      headers:{
-        'Authorization':`token ${_pat}`,
-        'Accept':'application/vnd.github+json',
-        'Cache-Control':'no-cache'
-      }
-    });
-    if(!res.ok)throw new Error(`GitHub API ${res.status}`);
-    const meta=await res.json();
-    ghFileSha=meta.sha;
-    // Decode base64 content (UTF-8 safe)
-    const raw=atob(meta.content.split('\n').join(''));
-    const bytes=new Uint8Array(raw.length);
-    for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
-    const data=JSON.parse(new TextDecoder('utf-8').decode(bytes));
+    // Read via raw URL — simple, fast, always works for public repos
+    const rawUrl=`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${GH_FILE}?t=${Date.now()}`;
+    const res=await fetch(rawUrl,{cache:'no-store'});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
     if(data._triplan_export==='trip'&&data.trip){
       state.trips=[data.trip];
       if(data.categories)state.categories=data.categories;
       currentTripId=data.trip.id;
-      console.log('✅ Loaded:',data.trip.name,'SHA:',ghFileSha);
+      console.log('✅ JSON loaded:',data.trip.name);
       setSyncStatus('saved');
     }else{
       throw new Error('Wrong format');
@@ -2378,10 +2346,11 @@ async function loadRotaFromJSON(){
   }catch(err){
     console.error('Load failed:',err);
     setSyncStatus('error',err.message);
-    showToast('⚠ Could not load trip — check connection');
+    showToast('⚠ Could not load trip data — check connection');
   }
   applyModeUI();
   renderTripsGrid();
+  // Auto-open the trip
   if(state.trips.length===1&&currentTripId){
     openTrip(currentTripId);
   }else{
