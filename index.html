@@ -907,18 +907,20 @@ function effectiveLodging(day,trip){return(day&&day.lodging)?day.lodging:(trip?t
 // Auth / Lock
 // ─────────────────────────────────────────────────────────────────────────
 async function unlockApp(){
-  const pw=document.getElementById('lock-pw').value;
-  const errEl=document.getElementById('lock-error');
-  errEl.textContent='';
-  if(!pw){errEl.textContent='Enter a password.';return;}
-  const hash=await hashPw(pw);
-  const stored=localStorage.getItem('triplan_data');
-  let pwView=DEFAULT_HASH_VIEW;
-  if(stored){const p=JSON.parse(stored);if(p.pwView)pwView=p.pwView;}
-  if(hash===pwView){enterApp('view');}
-  else{errEl.textContent='Incorrect password. Try again.';}
-}
+const pw = document.getElementById('lock-pw').value.trim();
+    const correctPw = "Seba2026";
 
+    if (pw === correctPw) {
+        document.getElementById('lockscreen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        
+        // Always load fresh data from GitHub repo
+        loadRotaFromJSON();
+    } else {
+        document.getElementById('lock-error').textContent = 'Incorrect password';
+    }
+}
+  
 function enterApp(m){
   mode=m;
   document.getElementById('lockscreen').style.display='none';
@@ -2142,6 +2144,37 @@ document.getElementById('admin-login-overlay').addEventListener('click',e=>{if(e
 // Boot
 // ─────────────────────────────────────────────────────────────────────────
 document.getElementById('lock-pw').focus();
+// ─────────────────────────────────────────────────────────────────────────
+// Load data from GitHub JSON (always fresh)
+// ─────────────────────────────────────────────────────────────────────────
+async function loadRotaFromJSON() {
+    try {
+        const response = await fetch('The_Final_Rota.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (data._triplan_export === "trip" && data.trip) {
+            // Load the trip and categories
+            state.trips = [data.trip];           // wrap as array
+            state.categories = data.categories || state.categories;
+            
+            currentTripId = data.trip.id;
+            
+            renderTripsGrid();
+            showTrips();                         // show the loaded trip
+            showToast('✅ The Final Rota loaded from GitHub');
+            
+            console.log("Loaded from JSON:", data.trip.name);
+        } else {
+            showToast('JSON format not recognized');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('❌ Could not load The_Final_Rota.json from GitHub');
+        // Optional fallback: initFromStorage();
+    }
+}
 </script>
 </body>
 </html>
