@@ -384,16 +384,27 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
   #main{flex-direction:column}
   #views{flex:1}
   
-  /* Fixed Top Nav */
+  /* Fixed Top Nav — never scrolls */
   #topnav{
     position: sticky;
     top: 0;
-    z-index: 1000;
-    height:56px;
-    padding:0 8px;
-    gap:4px;
+    z-index: 2500;
+    height:auto;
+    min-height:48px;
+    padding:6px 8px;
+    gap:2px;
     overflow-x:auto;
+    overflow-y:hidden;
+    flex-wrap:nowrap;
+    flex-shrink:0;
     background:var(--nav-bg);
+    -webkit-overflow-scrolling:touch;
+  }
+  #kebab-menu{
+    z-index:3000;
+    position:fixed;
+    top:54px;
+    right:4px;
   }
   
   #topnav .logo{font-size:15px}
@@ -404,10 +415,6 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
   #mobile-day-bar{display:flex; padding:8px 12px}
   
   .day-header{
-    position:sticky;
-    top:56px;
-    background:var(--bg);
-    z-index:900;
     padding:12px 0;
     margin-bottom:12px;
   }
@@ -420,20 +427,38 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
   }
   .form-row{grid-template-columns:1fr}
   
-  #map-day-toggle{top:12px; z-index:1000}
-  #map-container{height:calc(100% - 60px) !important}
+  #map-day-toggle{
+    top:8px;
+    z-index:1200;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex !important;
+  }
+  .map-toggle-btn{padding:6px 12px;font-size:12px}
+  #map-day-switcher{
+    top:8px;
+    right:8px;
+    padding:5px 8px;
+  }
+  #map-day-switcher select{font-size:12px}
+  #map-container{height:100% !important}
+  #map-detail{max-height:60%}
 }   
     /* Hide less important elements */
   .reorder-hint{font-size:10px}
-}
 
 /* Toast */
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1E2A35;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9000;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* Hide GitHub Pages bottom bar */
-body::after {
+/* Hide GitHub Pages bottom bar and any injected iframes/overlays */
+body > iframe[src*="github"], 
+body > div[style*="position: fixed"][style*="bottom"],
+.js-cookie-consent,
+#github-pages-custom-domain-info {
   display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }
 </style>
 </head>
@@ -678,6 +703,7 @@ body::after {
       <div class="form-group"><label>Travel time (min)</label><input type="number" id="f-travel" placeholder="15" min="0"/></div>
       <div class="form-group"><label>Google Maps link</label><input type="url" id="f-maps" placeholder="https://maps.google.com/…"/></div>
     </div>
+    <div class="form-group"><label>Activity link — optional</label><input type="url" id="f-link" placeholder="https://… (booking page, website, info)"/></div>
     <div class="form-group">
       <label>Transport type</label>
       <div class="transport-tags" id="transport-tags">
@@ -950,19 +976,20 @@ function effectiveLodging(day,trip){return(day&&day.lodging)?day.lodging:(trip?t
 // Auth / Lock
 // ─────────────────────────────────────────────────────────────────────────
 async function unlockApp(){
-const pw = document.getElementById('lock-pw').value.trim();
-    const correctPw = "Seba2026";
-
-    if (pw === correctPw) {
-        document.getElementById('lockscreen').style.display = 'none';
-        document.getElementById('app').style.display = 'flex';
-        
-        // Load from JSON
-        loadRotaFromJSON();
-    } else {
-        document.getElementById('lock-error').textContent = 'Incorrect password';
-        document.getElementById('lock-pw').focus();
-    }
+  const pw=document.getElementById('lock-pw').value.trim();
+  const errEl=document.getElementById('lock-error');
+  errEl.textContent='';
+  if(!pw){errEl.textContent='Enter a password.';return;}
+  const hash=await hashPw(pw);
+  const stored=localStorage.getItem('triplan_data');
+  let pwView=DEFAULT_HASH_VIEW;
+  if(stored){const p=JSON.parse(stored);if(p.pwView)pwView=p.pwView;}
+  if(hash===pwView){
+    sessionStorage.setItem('triplan_session','view');
+    enterApp('view');
+  }else{
+    errEl.textContent='Incorrect password. Try again.';
+  }
 }  
 function enterApp(m){
   mode=m;
@@ -970,9 +997,9 @@ function enterApp(m){
   document.getElementById('app').style.display='flex';
   document.getElementById('lock-pw').value='';
   document.getElementById('lock-error').textContent='';
+  sessionStorage.setItem('triplan_session',m);
   applyModeUI();
-  load();
-  renderTripsGrid();
+  loadRotaFromJSON();
 }
 
 function applyModeUI(){
@@ -1000,6 +1027,7 @@ function applyModeUI(){
 
 function lockApp(){
   mode='view';
+  sessionStorage.removeItem('triplan_session');
   document.getElementById('lockscreen').style.display='flex';
   document.getElementById('app').style.display='none';
   document.getElementById('lock-pw').value='';
@@ -1025,14 +1053,16 @@ async function submitAdminLogin(){
   let pwAdmin=DEFAULT_HASH_ADMIN;
   if(stored){const p=JSON.parse(stored);if(p.pwAdmin)pwAdmin=p.pwAdmin;}
   if(hash===pwAdmin){
-    mode='admin';closeAdminLogin();applyModeUI();
+    mode='admin';sessionStorage.setItem('triplan_session','admin');
+    closeAdminLogin();applyModeUI();
     renderTripsGrid();if(currentTripId){renderSidebar();renderDay();}
     showToast('Admin mode enabled.');
   }else{errEl.textContent='Incorrect admin password.';}
 }
 
 function exitAdminMode(){
-  mode='view';applyModeUI();
+  mode='view';sessionStorage.setItem('triplan_session','view');
+  applyModeUI();
   renderTripsGrid();if(currentTripId){renderSidebar();renderDay();}
   showToast('Returned to view mode.');
 }
@@ -1344,6 +1374,7 @@ function renderDay(){
           ${isAdmin()?`<button class="tile-action-btn danger" onclick="confirmDeleteActivity('${act.id}')">Delete</button>`:''}
           ${onMap?`<button class="tile-map-btn" onclick="switchView('map');highlightPin('${act.id}')">See on map →</button>`:''}
           ${act.mapsLink?`<a href="${esc(act.mapsLink)}" target="_blank" class="tile-map-btn" style="margin-left:auto">Google Maps ↗</a>`:''}
+          ${act.link?`<a href="${esc(act.link)}" target="_blank" class="tile-map-btn">Website ↗</a>`:''}
         </div>
       </div>
     </div>`;
@@ -1426,6 +1457,7 @@ function openActivityForm(actId){
     document.getElementById('f-lng').value=act.lng||'';
     document.getElementById('f-travel').value=act.travelMin||'';
     document.getElementById('f-maps').value=act.mapsLink||'';
+    document.getElementById('f-link').value=act.link||'';
     document.getElementById('f-route').value=act.routeNotes||'';
     document.getElementById('f-notes').value=act.notes||'';
     transportSelected=act.transportTags?[...act.transportTags]:[];
@@ -1436,7 +1468,7 @@ function openActivityForm(actId){
   }else{
     document.getElementById('form-title').textContent='Add activity';
     document.getElementById('edit-id').value='';
-    ['f-name','f-time','f-duration','f-location','f-lat','f-lng','f-travel','f-maps','f-route','f-notes'].forEach(id=>{
+    ['f-name','f-time','f-duration','f-location','f-lat','f-lng','f-travel','f-maps','f-link','f-route','f-notes'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.value='';
     });
     document.getElementById('f-reserved').checked=false;
@@ -1474,6 +1506,7 @@ function saveActivity(){
     lng:parseFloat(document.getElementById('f-lng').value)||null,
     travelMin:parseInt(document.getElementById('f-travel').value)||0,
     mapsLink:document.getElementById('f-maps').value.trim(),
+    link:document.getElementById('f-link').value.trim(),
     transportTags:[...transportSelected],
     routeNotes:document.getElementById('f-route').value.trim(),
     notes:document.getElementById('f-notes').value.trim(),
@@ -2034,6 +2067,7 @@ function openMapDetail(){
           <button class="tile-action-btn" onclick="closeMapDetail();switchView('day');currentDayIdx=${dayIdx};renderSidebar();renderDay()">View in day</button>
           ${isAdmin()?`<button class="tile-action-btn" onclick="closeMapDetail();switchView('day');currentDayIdx=${dayIdx};renderSidebar();renderDay();setTimeout(()=>editActivity('${act.id}'),100)">Edit</button>`:''}
           ${act.mapsLink?`<a href="${esc(act.mapsLink)}" target="_blank" class="tile-action-btn" style="text-decoration:none">Google Maps ↗</a>`:''}
+          ${act.link?`<a href="${esc(act.link)}" target="_blank" class="tile-action-btn" style="text-decoration:none">Website ↗</a>`:''}
         </div>
       </div>`;
   }
@@ -2184,9 +2218,16 @@ document.getElementById('kebab-menu').addEventListener('click',e=>e.stopPropagat
 document.getElementById('admin-login-overlay').addEventListener('click',e=>{if(e.target.id==='admin-login-overlay')closeAdminLogin();});
 
 // ─────────────────────────────────────────────────────────────────────────
-// Boot
+// Boot — restore session if still active (survives refresh, not tab close)
 // ─────────────────────────────────────────────────────────────────────────
-document.getElementById('lock-pw').focus();
+(async()=>{
+  const sess=sessionStorage.getItem('triplan_session');
+  if(sess==='view'||sess==='admin'){
+    await enterApp(sess);
+  }else{
+    document.getElementById('lock-pw').focus();
+  }
+})();
 // ─────────────────────────────────────────────────────────────────────────
 // Load data from GitHub JSON (always fresh)
 // ─────────────────────────────────────────────────────────────────────────
@@ -2224,6 +2265,14 @@ async function loadRotaFromJSON() {
         renderTripsGrid();
     }
 }
+</script>
+<script>
+// Remove GitHub Pages injected UI elements
+(function removeGHInjected(){
+  const sel='iframe[src*="github.com"],div[data-testid="footer"],#github-pages-status';
+  const clean=()=>document.querySelectorAll(sel).forEach(el=>el.remove());
+  clean();new MutationObserver(clean).observe(document.body,{childList:true,subtree:false});
+})();
 </script>
 </body>
 </html>
