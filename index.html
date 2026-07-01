@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https: data: blob:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://nominatim.openstreetmap.org https://unpkg.com https://*.tile.openstreetmap.org; img-src 'self' data: https://*.tile.openstreetmap.org https://*.openstreetmap.org; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com;"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>Triplan</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -1000,12 +1001,13 @@ async function pushToGitHub(){
   const pat='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';
   setSyncStatus('saving');
   try{
-    // Always get current SHA before writing to avoid 422 conflicts
-    if(!ghFileSha){
+    // Always fetch latest SHA before writing to avoid 422 conflicts
+    {
       const shaRes=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`,{
         headers:{'Authorization':`token ${pat}`,'Accept':'application/vnd.github+json'}
       });
       if(shaRes.ok){const shaData=await shaRes.json();ghFileSha=shaData.sha;}
+      else{throw new Error(`SHA fetch failed: ${shaRes.status}`);}
     }
     const tr=currentTrip();
     const payload={
@@ -2329,27 +2331,16 @@ document.getElementById('admin-login-overlay').addEventListener('click',e=>{if(e
 async function loadRotaFromJSON(){
   setSyncStatus('saving');
   try{
-    // Always fetch fresh JSON from GitHub (source of truth for everyone)
-    const res=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`,{
-      headers:{
-        'Accept':'application/vnd.github+json',
-        'Cache-Control':'no-cache'
-      }
-    });
-    if(!res.ok)throw new Error(`GitHub API ${res.status}`);
-    const meta=await res.json();
-    ghFileSha=meta.sha; // capture SHA for later writes
-    // Proper UTF-8 base64 decode (handles Italian/accented chars)
-    const raw=atob(meta.content.replace(/\n/g,''));
-    const bytes=new Uint8Array(raw.length);
-    for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
-    const content=new TextDecoder('utf-8').decode(bytes);
-    const data=JSON.parse(content);
+    // Read via raw URL (simple, fast, works for public repos, no API rate limits)
+    const rawUrl=`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${GH_FILE}?t=${Date.now()}`;
+    const res=await fetch(rawUrl,{cache:'no-store'});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
     if(data._triplan_export==='trip'&&data.trip){
       state.trips=[data.trip];
       if(data.categories)state.categories=data.categories;
       currentTripId=data.trip.id;
-      console.log('✅ JSON loaded:',data.trip.name,'SHA:',ghFileSha);
+      console.log('✅ JSON loaded:',data.trip.name);
       setSyncStatus('saved');
     }else{
       throw new Error('Wrong format');
@@ -2357,11 +2348,10 @@ async function loadRotaFromJSON(){
   }catch(err){
     console.error('Load failed:',err);
     setSyncStatus('error',err.message);
-    showToast('⚠ Could not load trip data — check connection');
+    showToast('⚠ Could not load trip — check connection');
   }
   applyModeUI();
   renderTripsGrid();
-  // Auto-open the trip
   if(state.trips.length===1&&currentTripId){
     openTrip(currentTripId);
   }else{
