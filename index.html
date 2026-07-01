@@ -376,11 +376,8 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 .modal .form-group{margin-bottom:12px}
 .modal .form-group:last-of-type{margin-bottom:0}
 
-::-webkit-scrollbar{width:5px}
-#view-map-wrapper ::-webkit-scrollbar{display:none}
-#map-container ::-webkit-scrollbar{display:none}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:10px}
+*{scrollbar-width:none;-ms-overflow-style:none}
+::-webkit-scrollbar{display:none}
 
 #mobile-day-bar{display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;flex-shrink:0}
 #mobile-day-bar select{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text);outline:none}
@@ -395,33 +392,42 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
     position: sticky;
     top: 0;
     z-index: 2500;
-    height:auto;
-    min-height:48px;
-    padding:4px 6px;
-    gap:1px;
+    height:48px;
+    padding:0 4px;
+    gap:0;
     overflow:visible;
     flex-wrap:nowrap;
     flex-shrink:0;
     background:var(--nav-bg);
   }
-  /* Trip name hidden on mobile to save space */
+  /* Hide logo text, keep icon only */
+  #topnav .logo span{display:inline}
+  #topnav .logo{font-size:14px;margin-right:2px}
+  #topnav .logo-text{display:none}
+  /* Trip name hidden on mobile */
   #trip-name-display{display:none !important}
-  /* Kebab drops below nav, high z-index, not clipped by parent */
+  /* Shrink nav buttons to fit */
+  .nav-btn{padding:4px 7px;font-size:0;flex-shrink:0;gap:3px}/* font-size:0 hides text, SVG uses its own size */
+  .nav-btn svg{width:14px;height:14px;flex-shrink:0}
+  /* Hide nav button labels on very small screens, keep icons */
+  #nav-days span,.nav-btn-label{display:none}
+  /* Mode badge minimal */
+  #mode-badge{font-size:9px;padding:2px 5px;margin-right:2px;flex-shrink:0}
+  /* Sync badge minimal */
+  #sync-badge{font-size:9px;padding:2px 5px;margin-right:0}
+  /* Kebab button always reachable — fixed size, no shrink */
+  #kebab-btn{padding:6px 8px;flex-shrink:0;min-width:32px}
+  /* Kebab menu drops below nav */
   #kebab-menu{
     position:fixed;
-    top:52px;
-    right:4px;
+    top:50px;
+    right:2px;
     z-index:9500;
     min-width:210px;
-    max-height:calc(100vh - 60px);
+    max-height:calc(100vh - 56px);
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
   }
-  
-  #topnav .logo{font-size:15px}
-  .nav-btn{padding:5px 9px; font-size:12px; flex-shrink:0}
-  #mode-badge{font-size:10px; padding:2px 6px}
-  #trip-name-display{max-width:150px; font-size:13px}
   
   #mobile-day-bar{display:flex; padding:8px 12px}
   
@@ -548,11 +554,20 @@ body > div[style*="position:fixed"],
         <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
       </button>
       <div id="kebab-menu">
+        <!-- Admin mode: Exit shown FIRST so always reachable -->
+        <div class="kebab-item" id="exit-admin-item" style="display:none" onclick="closeKebab();exitAdminMode()">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Exit Admin mode
+        </div>
+        <div class="kebab-divider" id="exit-admin-divider" style="display:none"></div>
+        <!-- View mode: Switch to admin -->
         <div class="kebab-item" id="menu-admin-login" onclick="openAdminLogin()">
           <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           Switch to Admin mode
         </div>
+        <!-- Admin-only items -->
         <div id="admin-only-menu-items" style="display:none">
+          <div class="kebab-divider"></div>
           <div class="kebab-item" onclick="closeKebab();openCats()">
             <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="2"/><circle cx="15" cy="15" r="2"/><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/></svg>
             Categories
@@ -567,10 +582,6 @@ body > div[style*="position:fixed"],
           </div>
         </div>
         <div class="kebab-divider"></div>
-        <div class="kebab-item" id="exit-admin-item" style="display:none" onclick="closeKebab();exitAdminMode()">
-          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Exit Admin mode
-        </div>
         <div class="kebab-item" onclick="closeKebab();lockApp()">
           <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           Lock app
@@ -1104,6 +1115,7 @@ function applyModeUI(){
   document.getElementById('menu-admin-login').style.display=mode==='admin'?'none':'flex';
   document.getElementById('admin-only-menu-items').style.display=mode==='admin'?'block':'none';
   const exitItem=document.getElementById('exit-admin-item');if(exitItem)exitItem.style.display=mode==='admin'?'flex':'none';
+  const exitDiv=document.getElementById('exit-admin-divider');if(exitDiv)exitDiv.style.display=mode==='admin'?'block':'none';
   document.getElementById('new-trip-btn').style.display=isAdmin()?'':'none';
   document.getElementById('add-day-btn').style.display=isAdmin()&&currentTripId?'flex':'none';
   document.getElementById('add-activity-btn-top').style.display=isAdmin()?'':'none';
@@ -2326,7 +2338,10 @@ document.getElementById('admin-login-overlay').addEventListener('click',e=>{if(e
     document.getElementById('lock-pw').focus();
   }
   // Trigger iOS Safari URL bar collapse on load
-  setTimeout(()=>{window.scrollTo(0,1);setTimeout(()=>window.scrollTo(0,0),50);},300);
+  // Collapse iOS Safari URL bar
+  function collapseURLBar(){window.scrollTo(0,1);setTimeout(()=>window.scrollTo(0,0),50);}
+  setTimeout(collapseURLBar,300);
+  document.addEventListener('touchstart',collapseURLBar,{once:true,passive:true});
 })();
 // ─────────────────────────────────────────────────────────────────────────
 // Load data from GitHub JSON (always fresh)
