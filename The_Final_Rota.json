@@ -226,7 +226,8 @@
             "lat": 38.6968,
             "lng": -9.1945,
             "travelMin": 10,
-            "mapsLink": "https://lisbonboatparty.com/tickets/sailing-boat/",
+            "mapsLink": "",
+            "link": "https://lisbonboatparty.com",
             "transportTags": [
               "🚶 Walking"
             ],
