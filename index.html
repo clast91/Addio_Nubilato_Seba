@@ -1,0 +1,2147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Triplan</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+  --bg:#F7F5F0;--surface:#FFFFFF;--surface2:#F0EDE6;--surface3:#E8E4DC;
+  --nav-bg:#1E2A35;--nav-text:#C8D4DF;--nav-active:#FFFFFF;
+  --accent:#C07A45;--accent-light:#F5E8DC;--accent-dark:#9A5E30;
+  --text:#1A1A1A;--text-2:#555550;--text-3:#8C8880;
+  --border:#E2DED7;--border-strong:#C8C4BC;
+  --radius:10px;
+  --shadow:0 1px 4px rgba(0,0,0,.08),0 0 0 0.5px rgba(0,0,0,.06);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.14),0 1px 4px rgba(0,0,0,.08);
+  --sidebar-w:220px;--nav-h:56px;
+  --green:#2D7A4F;--green-bg:#E6F4EC;
+  --red:#C0392B;--red-bg:#FDECEA;
+  --lodging:#2D6A8A;--lodging-bg:#E3EFF4;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+
+/* ── Lock screen ── */
+#lockscreen{
+  position:fixed;inset:0;background:var(--nav-bg);z-index:9999;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.lock-box{
+  background:var(--surface);border-radius:16px;padding:36px 32px;width:100%;max-width:380px;
+  box-shadow:var(--shadow-lg);text-align:center;
+}
+.lock-logo{font-size:36px;margin-bottom:8px}
+.lock-box h2{font-size:22px;font-weight:700;margin-bottom:4px;letter-spacing:-.4px}
+.lock-box p{font-size:14px;color:var(--text-3);margin-bottom:24px}
+.lock-pw-group{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+#lock-pw{
+  width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;
+  font-size:14px;outline:none;text-align:center;letter-spacing:.1em;
+  transition:border-color .15s;
+}
+#lock-pw:focus{border-color:var(--accent)}
+#lock-error{font-size:12px;color:var(--red);min-height:16px}
+.lock-submit{
+  width:100%;padding:11px;background:var(--accent);color:#fff;border:none;
+  border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;
+}
+.lock-submit:hover{background:var(--accent-dark)}
+
+/* ── Admin login modal (small, from within view mode) ── */
+#admin-login-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:8000;
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+#admin-login-overlay.open{display:flex}
+.admin-login-box{
+  background:var(--surface);border-radius:14px;padding:28px;width:100%;max-width:320px;
+  box-shadow:var(--shadow-lg);text-align:center;
+}
+.admin-login-box .ali{font-size:28px;margin-bottom:8px}
+.admin-login-box h3{font-size:17px;font-weight:700;margin-bottom:4px}
+.admin-login-box p{font-size:13px;color:var(--text-3);margin-bottom:18px}
+
+/* ── Mode badge ── */
+#mode-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:.04em;margin-right:8px}
+#mode-badge.view{background:rgba(255,255,255,.12);color:var(--nav-text)}
+#mode-badge.admin{background:#C07A45;color:#fff}
+
+/* ── App layout ── */
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+#topnav{height:var(--nav-h);background:var(--nav-bg);display:flex;align-items:center;padding:0 16px;gap:0;flex-shrink:0;z-index:100}
+#topnav .logo{color:#fff;font-size:17px;font-weight:600;letter-spacing:-.3px;margin-right:auto;cursor:pointer;display:flex;align-items:center;gap:8px}
+#topnav .logo span{font-size:20px}
+.nav-btn{background:none;border:none;color:var(--nav-text);font-size:13px;font-weight:500;padding:6px 14px;border-radius:6px;cursor:pointer;transition:background .15s,color .15s;display:flex;align-items:center;gap:6px}
+.nav-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-btn.active{background:rgba(255,255,255,.13);color:var(--nav-active)}
+.nav-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#topnav .sep{width:1px;height:22px;background:rgba(255,255,255,.12);margin:0 4px}
+#trip-name-display{color:#fff;font-size:14px;opacity:.8;margin-right:4px;padding:4px 8px;border-radius:6px;transition:background .15s;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#trip-name-display.editable{cursor:pointer}
+#trip-name-display.editable:hover{background:rgba(255,255,255,.1)}
+
+/* ── Overflow menu (kebab) ── */
+.menu-wrap{position:relative}
+#kebab-btn{background:none;border:none;color:var(--nav-text);cursor:pointer;padding:7px 9px;border-radius:6px;transition:background .15s,color .15s;display:flex;align-items:center}
+#kebab-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+#kebab-btn svg{width:17px;height:17px}
+#kebab-menu{
+  position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);
+  border-radius:10px;box-shadow:var(--shadow-lg);border:1px solid var(--border);
+  min-width:190px;padding:6px;display:none;z-index:500;
+}
+#kebab-menu.open{display:block}
+.kebab-item{
+  display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:7px;cursor:pointer;
+  font-size:13px;color:var(--text);transition:background .15s;
+}
+.kebab-item:hover{background:var(--surface2)}
+.kebab-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--text-3);flex-shrink:0}
+.kebab-divider{height:1px;background:var(--border);margin:5px 2px}
+
+/* ── Main ── */
+#main{display:flex;flex:1;overflow:hidden}
+#sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+#sidebar-header{padding:14px 16px;border-bottom:1px solid var(--border)}
+#sidebar-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+#sidebar-header h3{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+#add-day-btn{background:var(--accent-light);color:var(--accent-dark);border:none;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;padding:5px 10px;display:flex;align-items:center;gap:4px;transition:background .15s}
+#add-day-btn:hover{background:#EDD5BE}
+.sidebar-lodging-btn{
+  width:100%;padding:8px 10px;background:var(--lodging-bg);color:var(--lodging);border:none;
+  border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;
+  gap:6px;transition:background .15s;margin-top:8px;
+}
+.sidebar-lodging-btn:hover{background:#D2E4EC}
+#days-list{flex:1;overflow-y:auto;padding:8px}
+.day-item{padding:10px 12px;border-radius:8px;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.day-item:hover{background:var(--surface2)}
+.day-item.active{background:var(--accent-light)}
+.day-item-left{flex:1;min-width:0}
+.day-item .day-label{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day-item.active .day-label{color:var(--accent-dark)}
+.day-item .day-date{font-size:11px;color:var(--text-3);margin-top:1px}
+.day-item-right{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.day-count{font-size:11px;color:var(--text-3);background:var(--surface2);padding:2px 7px;border-radius:20px}
+.day-item.active .day-count{background:rgba(192,122,69,.15);color:var(--accent-dark)}
+.day-edit-btn{background:none;border:none;cursor:pointer;color:var(--text-3);padding:2px 4px;border-radius:4px;font-size:13px;opacity:0;transition:opacity .15s,color .15s;line-height:1}
+.day-item:hover .day-edit-btn{opacity:1}
+.day-edit-btn:hover{color:var(--accent)}
+
+/* ── Views ── */
+#views{flex:1;overflow:hidden;position:relative;display:flex}
+
+/* Trips view */
+#view-trips{padding:32px;overflow-y:auto;display:none;height:100%;flex-direction:column;width:100%}
+#view-trips.active{display:flex}
+.trips-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.trips-header h1{font-size:26px;font-weight:700;letter-spacing:-.5px}
+.trips-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.trip-card{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:20px;cursor:pointer;transition:box-shadow .15s,transform .1s;position:relative}
+.trip-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.trip-card h3{font-size:16px;font-weight:600;margin-bottom:4px;padding-right:48px}
+.trip-card .trip-meta{font-size:12px;color:var(--text-3);margin-bottom:12px}
+.trip-card .trip-stats{display:flex;gap:12px}
+.trip-stat{font-size:12px;color:var(--text-2)}
+.trip-card-actions{position:absolute;top:16px;right:16px;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.trip-card:hover .trip-card-actions{opacity:1}
+.trip-card-btn{background:var(--surface2);border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:background .15s;color:var(--text-2)}
+.trip-card-btn:hover{background:var(--surface3)}
+.trip-card-btn.del:hover{background:var(--red-bg);color:var(--red)}
+.new-trip-card{background:var(--surface);border-radius:12px;border:2px dashed var(--border-strong);padding:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:120px;color:var(--text-3);transition:border-color .15s,color .15s;gap:8px}
+.new-trip-card:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Day detail */
+#view-day-wrapper{display:none;flex:1;overflow:hidden;flex-direction:column}
+#view-day{flex:1;overflow-y:auto;padding:24px 28px}
+.day-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px}
+.day-header-left h2{font-size:20px;font-weight:700}
+.day-header-sub{font-size:13px;color:var(--text-3);margin-top:2px}
+.day-header-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+
+/* Lodging banner */
+.lodging-banner{
+  background:var(--lodging-bg);border:1px solid #C5DCE5;border-radius:var(--radius);
+  padding:12px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px;
+}
+.lodging-banner .li{font-size:20px;flex-shrink:0;margin-top:1px}
+.lodging-banner-body{flex:1;min-width:0}
+.lodging-banner .lb-label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--lodging);margin-bottom:2px}
+.lodging-banner .lb-name{font-size:14px;font-weight:600;color:var(--text)}
+.lodging-banner .lb-addr{font-size:12px;color:var(--text-2);margin-top:1px}
+.lodging-banner .lb-actions{display:flex;gap:8px;flex-shrink:0;align-items:center}
+.lodging-banner a.tile-map-btn{color:var(--lodging)}
+
+/* Activity tiles */
+#activities-list{display:flex;flex-direction:column;gap:12px}
+.activity-tile{
+  background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);
+  padding:16px 18px 16px 14px;transition:box-shadow .15s,opacity .15s;display:flex;gap:12px;
+}
+.activity-tile:hover{box-shadow:var(--shadow)}
+.activity-tile.dragging{opacity:.4}
+.activity-tile.drag-over{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-light)}
+.tile-number-col{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;padding-top:1px}
+.tile-number{
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.tile-number-offmap{background:var(--surface3);color:var(--text-3)}
+.badge-offmap{background:var(--surface3);color:var(--text-2)}
+.tile-drag-handle{
+  cursor:grab;color:var(--text-3);padding:2px;line-height:1;font-size:13px;
+  letter-spacing:-1px;user-select:none;touch-action:none;
+}
+.tile-drag-handle:active{cursor:grabbing}
+.tile-body{flex:1;min-width:0}
+.tile-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.badge{font-size:11px;font-weight:500;padding:3px 8px;border-radius:20px;display:inline-flex;align-items:center;gap:3px}
+.badge-cat{background:var(--accent-light);color:var(--accent-dark)}
+.badge-reserved{background:var(--green-bg);color:var(--green)}
+.tile-name{font-size:15px;font-weight:600;margin-bottom:3px}
+.tile-time{font-size:13px;color:var(--text-2);margin-bottom:6px}
+.tile-travel{font-size:12px;color:var(--text-3);background:var(--surface2);display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;margin-bottom:6px}
+.tile-notes{font-size:13px;color:var(--text-3);line-height:1.5}
+.tile-route{font-size:12px;color:var(--text-2);margin-top:4px;display:flex;align-items:flex-start;gap:5px}
+.tile-actions{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.tile-action-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--text-2);transition:all .15s;text-decoration:none;display:inline-flex;align-items:center}
+.tile-action-btn:hover{border-color:var(--accent);color:var(--accent)}
+.tile-action-btn.danger:hover{border-color:var(--red);color:var(--red)}
+.tile-map-btn{background:none;border:none;font-size:12px;color:var(--accent);cursor:pointer;padding:5px 0;text-decoration:none}
+.add-activity-btn{margin-top:16px;width:100%;padding:12px;background:none;border:2px dashed var(--border-strong);border-radius:var(--radius);font-size:13px;color:var(--text-3);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+.add-activity-btn:hover{border-color:var(--accent);color:var(--accent)}
+.empty-state{text-align:center;padding:48px 24px;color:var(--text-3)}
+.empty-state .empty-icon{font-size:36px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+.reorder-hint{font-size:11px;color:var(--text-3);margin-bottom:10px;display:flex;align-items:center;gap:5px}
+
+/* Map */
+#view-map-wrapper{display:none;flex:1;position:relative;overflow:hidden}
+#map-container{width:100%;height:100%}
+#map-day-toggle{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1000;background:var(--surface);border:1px solid var(--border);border-radius:8px;display:flex;overflow:hidden;box-shadow:var(--shadow)}
+.map-toggle-btn{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text-2);transition:background .15s,color .15s}
+.map-toggle-btn.active{background:var(--accent);color:#fff}
+#map-day-switcher{position:absolute;top:12px;right:12px;z-index:1000;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;box-shadow:var(--shadow);display:none}
+#map-day-switcher select{border:none;background:none;font-size:13px;color:var(--text);outline:none;cursor:pointer}
+#map-popup{position:absolute;z-index:1500;background:var(--surface);border-radius:10px;box-shadow:var(--shadow-lg);padding:14px 16px;min-width:200px;max-width:260px;display:none}
+#map-popup .popup-cat{font-size:11px;font-weight:500;color:var(--accent-dark);background:var(--accent-light);padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px}
+#map-popup .popup-cat.lodging{color:var(--lodging);background:var(--lodging-bg)}
+#map-popup .popup-name{font-size:14px;font-weight:600;margin-bottom:3px}
+#map-popup .popup-time{font-size:12px;color:var(--text-3);margin-bottom:10px}
+#map-popup .popup-details-btn{width:100%;padding:7px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer}
+#map-popup .popup-close{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;line-height:1}
+#map-detail{position:absolute;bottom:0;left:0;right:0;z-index:1400;background:var(--surface);border-top:1px solid var(--border);border-radius:16px 16px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.12);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:55%;overflow-y:auto;padding:20px 24px}
+#map-detail.open{transform:translateY(0)}
+#map-detail-close{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-3);line-height:1}
+.map-legend{position:absolute;bottom:24px;left:12px;z-index:1000;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;box-shadow:var(--shadow);min-width:140px}
+.legend-day{display:flex;align-items:center;gap:7px;margin-bottom:4px;cursor:pointer}
+.legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+
+/* Form panel */
+#form-panel{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100%;background:var(--surface);box-shadow:var(--shadow-lg);z-index:2000;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
+#form-panel.open{transform:translateX(0)}
+#form-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:1999;opacity:0;pointer-events:none;transition:opacity .3s}
+#form-overlay.open{opacity:1;pointer-events:all}
+.form-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.form-header h3{font-size:16px;font-weight:600}
+.form-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-3);line-height:1;padding:0 2px}
+.form-body{flex:1;overflow-y:auto;padding:20px}
+.form-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:5px;letter-spacing:.03em}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s;font-family:inherit}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:70px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-divider{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.08em;text-transform:uppercase;margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.transport-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.transport-tag{padding:5px 12px;border-radius:20px;font-size:12px;border:1px solid var(--border);cursor:pointer;transition:all .15s;background:none;color:var(--text-2)}
+.transport-tag.selected{background:var(--accent-light);border-color:var(--accent);color:var(--accent-dark)}
+.btn-primary{flex:1;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-secondary{padding:10px 16px;background:none;color:var(--text-2);border:1px solid var(--border);border-radius:8px;font-size:14px;cursor:pointer;transition:all .15s}
+.btn-secondary:hover{border-color:var(--border-strong);color:var(--text)}
+.btn-danger{padding:10px 16px;background:none;color:var(--red);border:1px solid var(--red);border-radius:8px;font-size:14px;cursor:pointer;transition:all .15s}
+.btn-danger:hover{background:var(--red-bg)}
+
+/* Geocoder */
+.geo-search-row{display:flex;gap:8px;margin-top:6px}
+.geo-search-row input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;transition:border-color .15s;font-family:inherit}
+.geo-search-row input:focus{border-color:var(--accent)}
+.geo-search-btn{padding:9px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s;flex-shrink:0}
+.geo-search-btn:hover{background:var(--accent-dark)}
+.geo-results{margin-top:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden;display:none}
+.geo-result-item{padding:10px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;line-height:1.4}
+.geo-result-item:last-child{border-bottom:none}
+.geo-result-item:hover{background:var(--accent-light)}
+.geo-result-item .geo-name{font-weight:500;color:var(--text)}
+.geo-result-item .geo-addr{font-size:11px;color:var(--text-3);margin-top:2px}
+.geo-coords{font-size:11px;color:var(--text-3);margin-top:6px}
+.geo-loading{padding:10px 12px;font-size:13px;color:var(--text-3);text-align:center}
+
+/* Categories panel */
+#cats-panel{position:fixed;top:0;right:0;bottom:0;width:360px;max-width:100%;background:var(--surface);box-shadow:var(--shadow-lg);z-index:2000;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
+#cats-panel.open{transform:translateX(0)}
+.cat-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;transition:background .15s}
+.cat-item:hover{background:var(--surface2)}
+.cat-name-input{flex:1;border:none;background:transparent;font-size:14px;color:var(--text);outline:none;padding:2px 4px;border-radius:4px;transition:background .15s;font-family:inherit}
+.cat-name-input:focus{background:var(--surface2)}
+.cat-color-input{width:28px;height:28px;padding:0;border:none;border-radius:50%;cursor:pointer;background:none;overflow:hidden}
+.cat-del{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;transition:color .15s;line-height:1}
+.cat-del:hover{color:var(--red)}
+
+/* IO panel */
+#io-panel{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:100%;background:var(--surface);box-shadow:var(--shadow-lg);z-index:2000;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
+#io-panel.open{transform:translateX(0)}
+.io-section{padding:20px 0;border-bottom:1px solid var(--border)}
+.io-section:first-child{padding-top:0}
+.io-section h4{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-2)}
+.io-section p{font-size:12px;color:var(--text-3);margin-bottom:12px}
+
+/* Settings panel */
+#settings-panel{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:100%;background:var(--surface);box-shadow:var(--shadow-lg);z-index:2000;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
+#settings-panel.open{transform:translateX(0)}
+.pw-change-group{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.pw-change-group input{padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;transition:border-color .15s;font-family:inherit}
+.pw-change-group input:focus{border-color:var(--accent)}
+
+/* Lodging panel */
+#lodging-panel{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100%;background:var(--surface);box-shadow:var(--shadow-lg);z-index:2000;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
+#lodging-panel.open{transform:translateX(0)}
+.lodging-scope-tabs{display:flex;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:18px}
+.lodging-scope-tab{flex:1;padding:8px;text-align:center;font-size:12px;font-weight:600;border-radius:7px;cursor:pointer;color:var(--text-3);transition:all .15s}
+.lodging-scope-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.lodging-existing{background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px}
+.lodging-existing .le-name{font-weight:600;margin-bottom:2px}
+.lodging-existing .le-addr{color:var(--text-3);font-size:12px}
+
+/* Expenses */
+#expense-panel{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:100%;background:var(--surface);box-shadow:var(--shadow-lg);z-index:2000;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
+#expense-panel.open{transform:translateX(0)}
+.exp-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px}
+.exp-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px}
+.exp-summary-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.exp-summary-card .esc-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.exp-summary-card .esc-value{font-size:22px;font-weight:700;letter-spacing:-.5px;color:var(--text)}
+.exp-summary-card .esc-sub{font-size:12px;color:var(--text-3);margin-top:3px}
+.exp-summary-card.accent{background:var(--accent);border-color:var(--accent-dark)}
+.exp-summary-card.accent .esc-label,.exp-summary-card.accent .esc-sub{color:rgba(255,255,255,.75)}
+.exp-summary-card.accent .esc-value{color:#fff}
+.exp-day-group{margin-bottom:24px}
+.exp-day-group-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.exp-day-group-header .edg-label{font-size:13px;font-weight:600;color:var(--text-2)}
+.exp-day-group-header .edg-total{font-size:12px;color:var(--text-3)}
+.exp-row{
+  background:var(--surface);border:1px solid var(--border);border-radius:9px;
+  padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;
+}
+.exp-row-icon{font-size:18px;flex-shrink:0;width:32px;text-align:center}
+.exp-row-body{flex:1;min-width:0}
+.exp-row-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-row-meta{font-size:12px;color:var(--text-3);margin-top:2px}
+.exp-row-right{text-align:right;flex-shrink:0}
+.exp-row-amount{font-size:14px;font-weight:600}
+.exp-row-pp{font-size:11px;color:var(--text-3);margin-top:2px;white-space:nowrap}
+.exp-row-actions{display:flex;gap:4px;margin-left:4px}
+.exp-row-btn{background:none;border:none;cursor:pointer;color:var(--text-3);padding:4px 6px;border-radius:5px;font-size:12px;transition:all .15s;line-height:1}
+.exp-row-btn:hover{background:var(--surface2);color:var(--text)}
+.exp-row-btn.del:hover{background:var(--red-bg);color:var(--red)}
+.exp-split-tabs{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.exp-split-tab{
+  display:flex;flex-direction:column;align-items:flex-start;padding:11px 14px;
+  border:2px solid var(--border);border-radius:9px;cursor:pointer;background:none;
+  text-align:left;font-size:13px;font-weight:500;color:var(--text);transition:all .15s;gap:2px;
+}
+.exp-split-tab.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent-dark)}
+.exp-split-desc{font-size:11px;font-weight:400;color:var(--text-3)}
+.exp-split-tab.active .exp-split-desc{color:var(--accent-dark);opacity:.8}
+.exp-empty{text-align:center;padding:48px 24px;color:var(--text-3)}
+.exp-empty .empty-icon{font-size:36px;margin-bottom:12px}
+.exp-empty p{font-size:14px}
+
+/* Generic modal */
+#modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px}
+#modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:14px;padding:28px;width:100%;max-width:400px;box-shadow:var(--shadow-lg)}
+.modal h3{font-size:18px;font-weight:600;margin-bottom:6px}
+.modal p{font-size:14px;color:var(--text-2);margin-bottom:20px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.modal .form-group{margin-bottom:12px}
+.modal .form-group:last-of-type{margin-bottom:0}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:10px}
+
+#mobile-day-bar{display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;flex-shrink:0}
+#mobile-day-bar select{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text);outline:none}
+@media(max-width:700px){
+  #sidebar{display:none}
+  #form-panel,#cats-panel,#io-panel,#settings-panel,#lodging-panel,#expense-panel{width:100%}
+  #mobile-day-bar{display:flex}
+  #view-day{padding:16px}
+  .trips-grid{grid-template-columns:1fr}
+  #view-trips{padding:20px 16px}
+  .form-row{grid-template-columns:1fr}
+  #topnav .logo span{display:none}
+  .lodging-banner{flex-wrap:wrap}
+}
+
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1E2A35;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9000;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- Lock screen (view password only) -->
+<div id="lockscreen">
+  <div class="lock-box">
+    <div class="lock-logo">🗺</div>
+    <h2>Triplan</h2>
+    <p>Enter the password to view trips</p>
+    <div class="lock-pw-group">
+      <input type="password" id="lock-pw" placeholder="Password" autocomplete="off" onkeydown="if(event.key==='Enter')unlockApp()"/>
+      <div id="lock-error"></div>
+    </div>
+    <button class="lock-submit" onclick="unlockApp()">Enter</button>
+  </div>
+</div>
+
+<!-- Admin login (from within view mode) -->
+<div id="admin-login-overlay">
+  <div class="admin-login-box">
+    <div class="ali">🔐</div>
+    <h3>Admin login</h3>
+    <p>Enter the admin password to edit this trip</p>
+    <div class="lock-pw-group">
+      <input type="password" id="admin-pw" placeholder="Admin password" autocomplete="off" onkeydown="if(event.key==='Enter')submitAdminLogin()"/>
+      <div id="admin-error" style="font-size:12px;color:var(--red);min-height:16px"></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-secondary" style="flex:1" onclick="closeAdminLogin()">Cancel</button>
+      <button class="lock-submit" style="flex:1" onclick="submitAdminLogin()">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" style="display:none">
+  <nav id="topnav">
+    <div class="logo" onclick="showTrips()"><span>🗺</span> Triplan</div>
+    <div id="trip-nav" style="display:none;align-items:center;gap:4px">
+      <span id="trip-name-display" title="Click to rename"></span>
+      <button class="nav-btn active" id="nav-days" onclick="switchView('day')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Days
+      </button>
+      <button class="nav-btn" id="nav-map" onclick="switchView('map')">
+        <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Map
+      </button>
+      <button class="nav-btn" id="nav-expenses" onclick="switchView('expenses')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Expenses
+      </button>
+    </div>
+    <span id="mode-badge" class="view">VIEW</span>
+    <div class="menu-wrap">
+      <button id="kebab-btn" onclick="toggleKebab(event)" title="Menu">
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+      </button>
+      <div id="kebab-menu">
+        <div class="kebab-item" id="menu-admin-login" onclick="openAdminLogin()">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Switch to Admin mode
+        </div>
+        <div id="admin-only-menu-items" style="display:none">
+          <div class="kebab-item" onclick="closeKebab();openCats()">
+            <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="2"/><circle cx="15" cy="15" r="2"/><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/></svg>
+            Categories
+          </div>
+          <div class="kebab-item" onclick="closeKebab();openIO()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Export / Import
+          </div>
+          <div class="kebab-item" onclick="closeKebab();openSettings()">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Settings
+          </div>
+          <div class="kebab-divider"></div>
+          <div class="kebab-item" onclick="closeKebab();exitAdminMode()">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Exit Admin mode
+          </div>
+        </div>
+        <div class="kebab-divider"></div>
+        <div class="kebab-item" onclick="closeKebab();lockApp()">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Lock app
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div id="main">
+    <aside id="sidebar" style="display:none">
+      <div id="sidebar-header">
+        <div id="sidebar-header-top">
+          <h3>Days</h3>
+          <button id="add-day-btn" onclick="addDay()" style="display:none">+ Add day</button>
+        </div>
+        <button id="lodging-sidebar-btn" class="sidebar-lodging-btn" style="display:none" onclick="openLodging()">
+          🏨 <span id="lodging-sidebar-label">Add lodging</span>
+        </button>
+      </div>
+      <div id="days-list"></div>
+    </aside>
+
+    <div id="views">
+      <div id="view-trips" class="active">
+        <div class="trips-header">
+          <h1>Your trips</h1>
+          <button id="new-trip-btn" class="btn-primary" style="width:auto;padding:9px 18px;display:none" onclick="openNewTripModal()">+ New trip</button>
+        </div>
+        <div class="trips-grid" id="trips-grid"></div>
+      </div>
+
+      <div id="view-day-wrapper">
+        <div id="mobile-day-bar">
+          <select id="mobile-day-select" onchange="selectDay(parseInt(this.value))"></select>
+        </div>
+        <div id="view-day">
+          <div class="day-header">
+            <div class="day-header-left">
+              <h2 id="day-title">Day 1</h2>
+              <div class="day-header-sub" id="day-subtitle"></div>
+            </div>
+            <div class="day-header-actions">
+              <button id="add-activity-btn-top" class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px;display:none" onclick="openActivityForm()">+ Add activity</button>
+            </div>
+          </div>
+          <div id="day-lodging-banner"></div>
+          <div id="reorder-hint" class="reorder-hint" style="display:none">
+            <svg style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2" viewBox="0 0 24 24"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l3 3 3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+            Drag the handle to reorder activities
+          </div>
+          <div id="activities-list"></div>
+          <button id="add-activity-btn-bottom" class="add-activity-btn" style="display:none" onclick="openActivityForm()">
+            <svg style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add activity to this day
+          </button>
+        </div>
+      </div>
+
+      <div id="view-map-wrapper">
+        <div id="map-day-toggle">
+          <button class="map-toggle-btn active" onclick="setMapMode('day')">This day</button>
+          <button class="map-toggle-btn" onclick="setMapMode('all')">All days</button>
+        </div>
+        <div id="map-day-switcher">
+          <select id="map-day-select" onchange="setMapDay(parseInt(this.value))"></select>
+        </div>
+        <div id="map-container"></div>
+        <div id="map-popup">
+          <button class="popup-close" onclick="closeMapPopup()">×</button>
+          <div class="popup-cat" id="pp-cat"></div>
+          <div class="popup-name" id="pp-name"></div>
+          <div class="popup-time" id="pp-time"></div>
+          <button class="popup-details-btn" onclick="openMapDetail()">Show details ↓</button>
+        </div>
+        <div class="map-legend" id="map-legend" style="display:none"></div>
+        <div id="map-detail">
+          <button id="map-detail-close" onclick="closeMapDetail()">×</button>
+          <div id="map-detail-content"></div>
+        </div>
+      </div>
+
+      <!-- Expenses view -->
+      <div id="view-expenses-wrapper" style="display:none;flex:1;overflow-y:auto;flex-direction:column">
+        <div style="padding:24px 28px;max-width:820px;width:100%">
+          <div class="exp-header">
+            <div>
+              <h2 style="font-size:20px;font-weight:700">Expenses</h2>
+              <div id="exp-subtitle" style="font-size:13px;color:var(--text-3);margin-top:2px"></div>
+            </div>
+            <button id="add-expense-btn" class="btn-primary" style="width:auto;padding:8px 16px;font-size:13px;display:none" onclick="openExpenseForm()">+ Add expense</button>
+          </div>
+
+          <!-- Summary cards -->
+          <div id="exp-summary" class="exp-summary-grid"></div>
+
+          <!-- Expense list by day -->
+          <div id="exp-list"></div>
+
+          <button id="add-expense-btn-bottom" class="add-activity-btn" style="display:none;margin-top:8px" onclick="openExpenseForm()">
+            <svg style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add expense
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="form-overlay" onclick="closeAllPanels()"></div>
+
+<!-- Activity form -->
+<div id="form-panel">
+  <div class="form-header">
+    <h3 id="form-title">Add activity</h3>
+    <button class="form-close" onclick="closeActivityForm()">×</button>
+  </div>
+  <div class="form-body">
+    <input type="hidden" id="edit-id"/>
+    <div class="form-group">
+      <label>Name</label>
+      <input type="text" id="f-name" placeholder="e.g. Lunch at Trattoria da Luigi"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <select id="f-cat"></select>
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:20px">
+        <input type="checkbox" id="f-reserved" style="width:16px;height:16px;accent-color:var(--accent)"/>
+        <label for="f-reserved" style="margin-bottom:0;font-size:13px;cursor:pointer">Has reservation</label>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Start time</label><input type="time" id="f-time"/></div>
+      <div class="form-group"><label>Duration (min) — optional</label><input type="number" id="f-duration" placeholder="e.g. 90" min="0"/></div>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="f-hide-map" style="width:16px;height:16px;accent-color:var(--accent)"/>
+      <label for="f-hide-map" style="margin-bottom:0;font-size:13px;cursor:pointer">Hide from map (e.g. flights, transit days)</label>
+    </div>
+
+    <div class="form-divider">Location</div>
+    <div class="form-group">
+      <label>Search place</label>
+      <div class="geo-search-row">
+        <input type="text" id="geo-search-input" placeholder="Search for a place…" onkeydown="if(event.key==='Enter'){event.preventDefault();geoSearch()}"/>
+        <button class="geo-search-btn" onclick="geoSearch()">Search</button>
+      </div>
+      <div id="geo-results" class="geo-results"></div>
+    </div>
+    <div class="form-group"><label>Address / label</label><input type="text" id="f-location" placeholder="Piazza Navona, Rome"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Latitude</label><input type="number" id="f-lat" placeholder="41.8990" step="any"/></div>
+      <div class="form-group"><label>Longitude</label><input type="number" id="f-lng" placeholder="12.4730" step="any"/></div>
+    </div>
+    <div id="geo-coords-display" class="geo-coords"></div>
+
+    <div class="form-divider">Travel from previous stop</div>
+    <div class="form-row">
+      <div class="form-group"><label>Travel time (min)</label><input type="number" id="f-travel" placeholder="15" min="0"/></div>
+      <div class="form-group"><label>Google Maps link</label><input type="url" id="f-maps" placeholder="https://maps.google.com/…"/></div>
+    </div>
+    <div class="form-group">
+      <label>Transport type</label>
+      <div class="transport-tags" id="transport-tags">
+        <button type="button" class="transport-tag" data-label="🚶 Walk" onclick="toggleTransport(this)">🚶 Walk</button>
+        <button type="button" class="transport-tag" data-label="🚇 Metro" onclick="toggleTransport(this)">🚇 Metro</button>
+        <button type="button" class="transport-tag" data-label="🚌 Bus" onclick="toggleTransport(this)">🚌 Bus</button>
+        <button type="button" class="transport-tag" data-label="🚕 Taxi" onclick="toggleTransport(this)">🚕 Taxi</button>
+        <button type="button" class="transport-tag" data-label="🚲 Bike" onclick="toggleTransport(this)">🚲 Bike</button>
+        <button type="button" class="transport-tag" data-label="🚗 Drive" onclick="toggleTransport(this)">🚗 Drive</button>
+        <button type="button" class="transport-tag" data-label="⛵ Boat" onclick="toggleTransport(this)">⛵ Boat</button>
+        <button type="button" class="transport-tag" data-label="🚠 Cable car" onclick="toggleTransport(this)">🚠 Cable car</button>
+        <button type="button" class="transport-tag" data-label="✈️ Flight" onclick="toggleTransport(this)">✈️ Flight</button>
+      </div>
+    </div>
+    <div class="form-group"><label>Route notes</label><textarea id="f-route" placeholder="e.g. Take the 23 bus, exit at Piazza Risorgimento"></textarea></div>
+
+    <div class="form-divider">Notes</div>
+    <div class="form-group"><label>Notes</label><textarea id="f-notes" placeholder="Any useful details, reminders, tips…"></textarea></div>
+  </div>
+  <div class="form-footer">
+    <button class="btn-secondary" onclick="closeActivityForm()">Cancel</button>
+    <button class="btn-primary" onclick="saveActivity()">Save activity</button>
+  </div>
+</div>
+
+<!-- Categories panel -->
+<div id="cats-panel">
+  <div class="form-header"><h3>Categories</h3><button class="form-close" onclick="closeCats()">×</button></div>
+  <div class="form-body">
+    <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">Edit names and colors directly. Changes save automatically.</p>
+    <div id="cats-list"></div>
+    <div class="form-divider">New category</div>
+    <div class="form-row" style="align-items:flex-end">
+      <div class="form-group" style="margin-bottom:0"><label>Name</label><input type="text" id="new-cat-name" placeholder="e.g. Beach"/></div>
+      <div class="form-group" style="margin-bottom:0"><label>Color</label><input type="color" id="new-cat-color" value="#C07A45" style="height:38px;padding:2px 6px;border-radius:8px;border:1px solid var(--border);width:100%;cursor:pointer"/></div>
+    </div>
+    <button class="btn-primary" style="margin-top:12px" onclick="addCategory()">Add category</button>
+  </div>
+</div>
+
+<!-- IO panel -->
+<div id="io-panel">
+  <div class="form-header"><h3>Export / Import</h3><button class="form-close" onclick="closeIO()">×</button></div>
+  <div class="form-body">
+    <div class="io-section">
+      <h4>Export current trip</h4>
+      <p>Downloads this trip as a JSON file you can share or back up.</p>
+      <button class="btn-primary" onclick="exportTrip()">Download trip JSON</button>
+    </div>
+    <div class="io-section">
+      <h4>Export all trips</h4>
+      <p>Downloads all trips and categories as one JSON file.</p>
+      <button class="btn-secondary" style="width:100%" onclick="exportAll()">Download all data</button>
+    </div>
+    <div class="io-section">
+      <h4>Import trip</h4>
+      <p>Import a previously exported trip JSON. Existing trips are not overwritten.</p>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)"/>
+      <button class="btn-secondary" style="width:100%" onclick="document.getElementById('import-file').click()">Choose file…</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings panel -->
+<div id="settings-panel">
+  <div class="form-header"><h3>Settings</h3><button class="form-close" onclick="closeSettings()">×</button></div>
+  <div class="form-body">
+    <div class="io-section" style="padding-top:0">
+      <h4>Change view password</h4>
+      <p>Password for the read-only view mode.</p>
+      <div class="pw-change-group">
+        <input type="password" id="pw-view-new" placeholder="New view password" autocomplete="new-password"/>
+        <input type="password" id="pw-view-confirm" placeholder="Confirm new password" autocomplete="new-password"/>
+      </div>
+      <button class="btn-secondary" style="width:100%" onclick="changePassword('view')">Update view password</button>
+    </div>
+    <div class="io-section">
+      <h4>Change admin password</h4>
+      <p>Password for the edit (admin) mode.</p>
+      <div class="pw-change-group">
+        <input type="password" id="pw-admin-new" placeholder="New admin password" autocomplete="new-password"/>
+        <input type="password" id="pw-admin-confirm" placeholder="Confirm new password" autocomplete="new-password"/>
+      </div>
+      <button class="btn-secondary" style="width:100%" onclick="changePassword('admin')">Update admin password</button>
+    </div>
+    <div class="io-section">
+      <h4>Session</h4>
+      <p>Lock the app and return to the password screen.</p>
+      <button class="btn-danger" style="width:100%" onclick="lockApp()">Lock now</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lodging panel -->
+<div id="lodging-panel">
+  <div class="form-header"><h3 id="lodging-form-title">Lodging</h3><button class="form-close" onclick="closeLodging()">×</button></div>
+  <div class="form-body">
+    <div class="lodging-scope-tabs">
+      <div class="lodging-scope-tab active" id="lodging-tab-trip" onclick="setLodgingScope('trip')">Trip default</div>
+      <div class="lodging-scope-tab" id="lodging-tab-day" onclick="setLodgingScope('day')">This day only</div>
+    </div>
+    <div id="lodging-existing-box"></div>
+
+    <input type="hidden" id="lg-scope" value="trip"/>
+    <div class="form-group"><label>Name</label><input type="text" id="lg-name" placeholder="e.g. Hotel Artemide / Cozy Trastevere Airbnb"/></div>
+
+    <div class="form-divider">Location</div>
+    <div class="form-group">
+      <label>Search place</label>
+      <div class="geo-search-row">
+        <input type="text" id="lg-geo-search-input" placeholder="Search for an address…" onkeydown="if(event.key==='Enter'){event.preventDefault();lgGeoSearch()}"/>
+        <button class="geo-search-btn" onclick="lgGeoSearch()">Search</button>
+      </div>
+      <div id="lg-geo-results" class="geo-results"></div>
+    </div>
+    <div class="form-group"><label>Address</label><input type="text" id="lg-address" placeholder="Via Nazionale 22, Rome"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Latitude</label><input type="number" id="lg-lat" placeholder="41.8990" step="any"/></div>
+      <div class="form-group"><label>Longitude</label><input type="number" id="lg-lng" placeholder="12.4730" step="any"/></div>
+    </div>
+    <div id="lg-geo-coords-display" class="geo-coords"></div>
+
+    <div class="form-divider">Stay details</div>
+    <div class="form-row">
+      <div class="form-group"><label>Check-in</label><input type="time" id="lg-checkin"/></div>
+      <div class="form-group"><label>Check-out</label><input type="time" id="lg-checkout"/></div>
+    </div>
+    <div class="form-group"><label>Confirmation / booking link</label><input type="url" id="lg-link" placeholder="https://…"/></div>
+    <div class="form-group"><label>Notes</label><textarea id="lg-notes" placeholder="Door code, contact info, wifi password…"></textarea></div>
+  </div>
+  <div class="form-footer">
+    <button class="btn-danger" id="lg-remove-btn" style="display:none" onclick="removeLodging()">Remove</button>
+    <button class="btn-secondary" onclick="closeLodging()">Cancel</button>
+    <button class="btn-primary" onclick="saveLodging()">Save lodging</button>
+  </div>
+</div>
+
+<!-- Expense form panel -->
+<div id="expense-panel">
+  <div class="form-header">
+    <h3 id="expense-form-title">Add expense</h3>
+    <button class="form-close" onclick="closeExpenseForm()">×</button>
+  </div>
+  <div class="form-body">
+    <input type="hidden" id="exp-edit-id"/>
+    <div class="form-group">
+      <label>Name</label>
+      <input type="text" id="exp-name" placeholder="e.g. Dinner at Osteria, Train tickets"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Amount</label>
+        <input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01"/>
+      </div>
+      <div class="form-group">
+        <label>Currency</label>
+        <input type="text" id="exp-currency" placeholder="EUR" maxlength="5" style="text-transform:uppercase"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Split type</label>
+      <div class="exp-split-tabs">
+        <button type="button" class="exp-split-tab active" id="split-tab-group" onclick="setSplitType('group')">
+          👥 Group total
+          <span class="exp-split-desc">Divide total by number of people</span>
+        </button>
+        <button type="button" class="exp-split-tab" id="split-tab-pp" onclick="setSplitType('pp')">
+          👤 Per person
+          <span class="exp-split-desc">Each person already pays this amount</span>
+        </button>
+      </div>
+    </div>
+    <div class="form-group" id="exp-people-group">
+      <label>Number of people</label>
+      <input type="number" id="exp-people" placeholder="2" min="1" value="2"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Day</label>
+        <select id="exp-day"></select>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="exp-category">
+          <option value="food">🍽 Food & drink</option>
+          <option value="transport">🚌 Transport</option>
+          <option value="accommodation">🏨 Accommodation</option>
+          <option value="activity">🎟 Activity / ticket</option>
+          <option value="shopping">🛍 Shopping</option>
+          <option value="other">📦 Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <input type="text" id="exp-notes" placeholder="Optional notes"/>
+    </div>
+  </div>
+  <div class="form-footer">
+    <button class="btn-secondary" onclick="closeExpenseForm()">Cancel</button>
+    <button class="btn-primary" onclick="saveExpense()">Save expense</button>
+  </div>
+</div>
+
+<div id="modal-overlay">
+  <div class="modal" id="modal-box">
+    <h3 id="modal-title">New trip</h3>
+    <p id="modal-desc" style="margin-bottom:16px"></p>
+    <div id="modal-body"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────
+// Constants & helpers
+// ─────────────────────────────────────────────────────────────────────────
+const DEFAULT_CATS=[
+  {id:'cat1',name:'Restaurant',color:'#C07A45'},
+  {id:'cat2',name:'Bar / Café',color:'#7A8FB5'},
+  {id:'cat3',name:'Museum',color:'#8A6FB0'},
+  {id:'cat4',name:'Landmark',color:'#4A9E7A'},
+  {id:'cat5',name:'Hotel',color:'#5A9BB5'},
+  {id:'cat6',name:'Activity',color:'#C05A6A'},
+  {id:'cat7',name:'Shopping',color:'#B09A40'},
+  {id:'cat8',name:'Transport',color:'#708090'},
+];
+const DAY_COLORS=['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
+const LODGING_COLOR='#2D6A8A';
+const DEFAULT_HASH_VIEW='2f920298843c29f4e6092b9acc5fb979bbb336ceb56f68013bf3e472f0f87e9f';
+const DEFAULT_HASH_ADMIN='417555d4d42765c3f2a2a737c1dcc64447ddc6f6e9dcf0ee73a1cb45f94ed300';
+
+function uid(){return'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function hexAlpha(hex,a){if(!hex||hex.length<7)return`rgba(128,128,128,${a})`;const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`}
+function formatTime(t){if(!t)return'';const[h,m]=t.split(':');return`${h.padStart(2,'0')}:${m}`}
+function formatDuration(min){if(!min)return'';const m=parseInt(min);if(m<60)return`${m} min`;const h=Math.floor(m/60),r=m%60;return r?`${h}h ${r}m`:`${h}h`}
+function formatDate(ds,offset){if(!ds)return'';const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+offset);return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
+async function hashPw(pw){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+
+// ─────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────
+let state={trips:[],categories:[...DEFAULT_CATS]};
+let mode='view';
+let currentTripId=null;
+let currentDayIdx=0;
+let mapInstance=null,mapMarkers=[],mapPolylines=[];
+let activePopupActivity=null; // {kind:'activity'|'lodging', act, dayIdx}
+let currentMapMode='day',currentMapDayIdx=0;
+let transportSelected=[];
+let lodgingScope='trip';
+let dragSrcIdx=null;
+
+function save(){localStorage.setItem('triplan_data',JSON.stringify(state))}
+function load(){
+  const d=localStorage.getItem('triplan_data');
+  if(d){const p=JSON.parse(d);state.trips=p.trips||[];state.categories=p.categories||[...DEFAULT_CATS];}
+}
+function currentTrip(){return state.trips.find(t=>t.id===currentTripId)||null}
+function currentDay(){const tr=currentTrip();if(!tr)return null;return tr.days[currentDayIdx]||null}
+function getCat(id){return state.categories.find(c=>c.id===id)||{name:'—',color:'#888'}}
+function isAdmin(){return mode==='admin'}
+function effectiveLodging(day,trip){return(day&&day.lodging)?day.lodging:(trip?trip.lodging:null)}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Auth / Lock
+// ─────────────────────────────────────────────────────────────────────────
+async function unlockApp(){
+  const pw=document.getElementById('lock-pw').value;
+  const errEl=document.getElementById('lock-error');
+  errEl.textContent='';
+  if(!pw){errEl.textContent='Enter a password.';return;}
+  const hash=await hashPw(pw);
+  const stored=localStorage.getItem('triplan_data');
+  let pwView=DEFAULT_HASH_VIEW;
+  if(stored){const p=JSON.parse(stored);if(p.pwView)pwView=p.pwView;}
+  if(hash===pwView){enterApp('view');}
+  else{errEl.textContent='Incorrect password. Try again.';}
+}
+
+function enterApp(m){
+  mode=m;
+  document.getElementById('lockscreen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('lock-pw').value='';
+  document.getElementById('lock-error').textContent='';
+  applyModeUI();
+  load();
+  renderTripsGrid();
+}
+
+function applyModeUI(){
+  const badge=document.getElementById('mode-badge');
+  badge.textContent=mode==='admin'?'ADMIN':'VIEW';
+  badge.className=(mode==='admin'?'admin':'view');
+  document.getElementById('menu-admin-login').style.display=mode==='admin'?'none':'flex';
+  document.getElementById('admin-only-menu-items').style.display=mode==='admin'?'block':'none';
+  document.getElementById('new-trip-btn').style.display=isAdmin()?'':'none';
+  document.getElementById('add-day-btn').style.display=isAdmin()&&currentTripId?'flex':'none';
+  document.getElementById('add-activity-btn-top').style.display=isAdmin()?'':'none';
+  document.getElementById('add-activity-btn-bottom').style.display=isAdmin()?'':'none';
+  document.getElementById('reorder-hint').style.display=isAdmin()?'flex':'none';
+  document.getElementById('lodging-sidebar-btn').style.display=isAdmin()&&currentTripId?'flex':'none';
+  if(document.getElementById('add-expense-btn'))document.getElementById('add-expense-btn').style.display=isAdmin()?'':'none';
+  if(document.getElementById('add-expense-btn-bottom'))document.getElementById('add-expense-btn-bottom').style.display=isAdmin()?'':'none';
+  // trip name: only editable in admin
+  const tnd=document.getElementById('trip-name-display');
+  if(tnd){
+    tnd.onclick=isAdmin()?()=>renameTripInline():null;
+    tnd.title=isAdmin()?'Click to edit name & date':'';
+    tnd.classList.toggle('editable',isAdmin());
+  }
+}
+
+function lockApp(){
+  mode='view';
+  document.getElementById('lockscreen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('lock-pw').value='';
+  document.getElementById('lock-error').textContent='';
+  closeAllPanels();closeKebab();
+}
+
+function openAdminLogin(){
+  closeKebab();
+  document.getElementById('admin-pw').value='';
+  document.getElementById('admin-error').textContent='';
+  document.getElementById('admin-login-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('admin-pw').focus(),50);
+}
+function closeAdminLogin(){document.getElementById('admin-login-overlay').classList.remove('open');}
+
+async function submitAdminLogin(){
+  const pw=document.getElementById('admin-pw').value;
+  const errEl=document.getElementById('admin-error');
+  if(!pw){errEl.textContent='Enter a password.';return;}
+  const hash=await hashPw(pw);
+  const stored=localStorage.getItem('triplan_data');
+  let pwAdmin=DEFAULT_HASH_ADMIN;
+  if(stored){const p=JSON.parse(stored);if(p.pwAdmin)pwAdmin=p.pwAdmin;}
+  if(hash===pwAdmin){
+    mode='admin';closeAdminLogin();applyModeUI();
+    renderTripsGrid();if(currentTripId){renderSidebar();renderDay();}
+    showToast('Admin mode enabled.');
+  }else{errEl.textContent='Incorrect admin password.';}
+}
+
+function exitAdminMode(){
+  mode='view';applyModeUI();
+  renderTripsGrid();if(currentTripId){renderSidebar();renderDay();}
+  showToast('Returned to view mode.');
+}
+
+function toggleKebab(e){e.stopPropagation();document.getElementById('kebab-menu').classList.toggle('open');}
+function closeKebab(){document.getElementById('kebab-menu').classList.remove('open');}
+document.addEventListener('click',()=>closeKebab());
+
+// ─────────────────────────────────────────────────────────────────────────
+// Password management
+// ─────────────────────────────────────────────────────────────────────────
+async function changePassword(which){
+  const newEl=document.getElementById(`pw-${which}-new`);
+  const confEl=document.getElementById(`pw-${which}-confirm`);
+  const np=newEl.value.trim(),cp=confEl.value.trim();
+  if(!np){showToast('Enter a new password.');return;}
+  if(np!==cp){showToast('Passwords do not match.');return;}
+  if(np.length<4){showToast('Password must be at least 4 characters.');return;}
+  const hash=await hashPw(np);
+  const stored=localStorage.getItem('triplan_data');
+  const data=stored?JSON.parse(stored):{trips:[],categories:[...DEFAULT_CATS]};
+  data[which==='view'?'pwView':'pwAdmin']=hash;
+  localStorage.setItem('triplan_data',JSON.stringify(data));
+  newEl.value='';confEl.value='';
+  showToast(`${which==='view'?'View':'Admin'} password updated.`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Views
+// ─────────────────────────────────────────────────────────────────────────
+function showTrips(){
+  currentTripId=null;
+  document.getElementById('trip-nav').style.display='none';
+  document.getElementById('sidebar').style.display='none';
+  document.getElementById('view-trips').style.display='flex';
+  document.getElementById('view-day-wrapper').style.display='none';
+  document.getElementById('view-map-wrapper').style.display='none';
+  document.getElementById('view-expenses-wrapper').style.display='none';
+  applyModeUI();
+  renderTripsGrid();
+}
+
+function openTrip(id){
+  currentTripId=id;currentDayIdx=0;
+  const tr=currentTrip();
+  document.getElementById('trip-name-display').textContent=tr.name;
+  const tnd=document.getElementById('trip-name-display');
+  tnd.onclick=isAdmin()?()=>renameTripInline():null;
+  tnd.title=isAdmin()?'Click to edit name & date':'';
+  tnd.classList.toggle('editable',isAdmin());
+  document.getElementById('trip-nav').style.display='flex';
+  document.getElementById('sidebar').style.display='flex';
+  document.getElementById('view-trips').style.display='none';
+  applyModeUI();
+  switchView('day');
+}
+
+function switchView(view){
+  document.getElementById('nav-days').classList.toggle('active',view==='day');
+  document.getElementById('nav-map').classList.toggle('active',view==='map');
+  document.getElementById('nav-expenses').classList.toggle('active',view==='expenses');
+  document.getElementById('view-day-wrapper').style.display=view==='day'?'flex':'none';
+  document.getElementById('view-map-wrapper').style.display=view==='map'?'flex':'none';
+  document.getElementById('view-expenses-wrapper').style.display=view==='expenses'?'flex':'none';
+  if(view==='day'){renderSidebar();renderDay();}
+  else if(view==='map'){initMap();renderMap();}
+  else if(view==='expenses'){renderExpenses();}
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Trips CRUD
+// ─────────────────────────────────────────────────────────────────────────
+function renderTripsGrid(){
+  const g=document.getElementById('trips-grid');g.innerHTML='';
+  if(!state.trips.length){
+    const emp=document.createElement('div');
+    emp.className='empty-state';emp.style.gridColumn='1/-1';
+    emp.innerHTML=`<div class="empty-icon">🗺</div><p>${isAdmin()?'No trips yet. Create your first to get started.':'No trips available.'}</p>`;
+    g.appendChild(emp);
+  }
+  state.trips.forEach(trip=>{
+    const total=trip.days.reduce((a,d)=>a+d.activities.length,0);
+    const card=document.createElement('div');card.className='trip-card';
+    card.innerHTML=`
+      <h3>${esc(trip.name)}</h3>
+      <div class="trip-meta">${trip.startDate?formatDate(trip.startDate,0):'No date'} · ${trip.days.length} day${trip.days.length!==1?'s':''}</div>
+      <div class="trip-stats"><span class="trip-stat">📍 ${total} activities</span></div>
+      ${isAdmin()?`<div class="trip-card-actions">
+        <button class="trip-card-btn" title="Edit name & date" onclick="event.stopPropagation();openRenameTrip('${trip.id}')">✏️</button>
+        <button class="trip-card-btn del" title="Delete" onclick="event.stopPropagation();confirmDeleteTrip('${trip.id}')">🗑</button>
+      </div>`:''}
+    `;
+    card.onclick=()=>openTrip(trip.id);g.appendChild(card);
+  });
+  if(isAdmin()){
+    const nc=document.createElement('div');nc.className='new-trip-card';
+    nc.innerHTML=`<svg style="width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span style="font-size:14px;font-weight:500">New trip</span>`;
+    nc.onclick=openNewTripModal;g.appendChild(nc);
+  }
+}
+
+function openNewTripModal(){
+  showModal('New trip','',`
+    <div class="form-group"><label>Trip name</label><input type="text" id="mt-name" placeholder="e.g. Paris Spring 2025"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>Start date</label><input type="date" id="mt-date"/></div>
+      <div class="form-group"><label>Days</label><input type="number" id="mt-days" value="3" min="1" max="90"/></div>
+    </div>
+  `,[
+    {label:'Cancel',cls:'btn-secondary',fn:'closeModal()'},
+    {label:'Create trip',cls:'btn-primary',fn:'createTrip()'},
+  ]);
+  setTimeout(()=>document.getElementById('mt-name')?.focus(),50);
+}
+
+function createTrip(){
+  const name=(document.getElementById('mt-name')?.value||'').trim();
+  if(!name){document.getElementById('mt-name')?.focus();return;}
+  const startDate=document.getElementById('mt-date')?.value||'';
+  const n=parseInt(document.getElementById('mt-days')?.value)||1;
+  const trip={id:uid(),name,startDate,lodging:null,expenses:[],days:Array.from({length:n},(_,i)=>({id:uid(),label:`Day ${i+1}`,activities:[],lodging:null}))};
+  state.trips.push(trip);save();closeModal();openTrip(trip.id);
+}
+
+function openRenameTrip(id){
+  const trip=state.trips.find(t=>t.id===id);if(!trip)return;
+  showModal('Edit trip','',`
+    <div class="form-group"><label>Trip name</label><input type="text" id="rename-val" value="${esc(trip.name)}"/></div>
+    <div class="form-group"><label>Start date</label><input type="date" id="rename-date-val" value="${esc(trip.startDate||'')}"/></div>
+    <p style="font-size:12px;color:var(--text-3);margin-top:-4px">Changing the start date shifts the dates shown next to each day — day labels themselves are unaffected.</p>
+  `,[
+    {label:'Cancel',cls:'btn-secondary',fn:'closeModal()'},
+    {label:'Save',cls:'btn-primary',fn:`doRenameTrip('${id}')`},
+  ]);
+  setTimeout(()=>{const i=document.getElementById('rename-val');if(i){i.focus();i.select();}},50);
+}
+function doRenameTrip(id){
+  const val=(document.getElementById('rename-val')?.value||'').trim();if(!val)return;
+  const dateVal=document.getElementById('rename-date-val')?.value||'';
+  const trip=state.trips.find(t=>t.id===id);if(!trip)return;
+  trip.name=val;trip.startDate=dateVal;save();closeModal();
+  if(currentTripId===id){
+    document.getElementById('trip-name-display').textContent=val;
+    renderSidebar();renderDay();
+  }
+  renderTripsGrid();showToast('Trip updated.');
+}
+function renameTripInline(){const tr=currentTrip();if(!tr)return;openRenameTrip(tr.id);}
+
+function confirmDeleteTrip(id){
+  const trip=state.trips.find(t=>t.id===id);if(!trip)return;
+  showModal('Delete trip',`Delete "${trip.name}"? This cannot be undone.`,'',[
+    {label:'Cancel',cls:'btn-secondary',fn:'closeModal()'},
+    {label:'Delete',cls:'btn-danger',fn:`doDeleteTrip('${id}')`},
+  ]);
+}
+function doDeleteTrip(id){
+  state.trips=state.trips.filter(t=>t.id!==id);save();closeModal();
+  if(currentTripId===id)showTrips();else renderTripsGrid();
+  showToast('Trip deleted.');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Sidebar / Days
+// ─────────────────────────────────────────────────────────────────────────
+function renderSidebar(){
+  const tr=currentTrip();if(!tr)return;
+  const list=document.getElementById('days-list');list.innerHTML='';
+  tr.days.forEach((day,i)=>{
+    const el=document.createElement('div');
+    el.className='day-item'+(i===currentDayIdx?' active':'');
+    el.innerHTML=`
+      <div class="day-item-left" onclick="selectDay(${i})">
+        <div class="day-label">${esc(day.label)}</div>
+        ${tr.startDate?`<div class="day-date">${formatDate(tr.startDate,i)}</div>`:''}
+      </div>
+      <div class="day-item-right">
+        <span class="day-count">${day.activities.length}</span>
+        ${isAdmin()?`<button class="day-edit-btn" title="Rename day" onclick="event.stopPropagation();renameDay(${i})">✏</button>`:''}
+      </div>
+    `;
+    list.appendChild(el);
+  });
+  const ms=document.getElementById('mobile-day-select');
+  ms.innerHTML=tr.days.map((d,i)=>`<option value="${i}">${esc(d.label)}${tr.startDate?' · '+formatDate(tr.startDate,i):''}</option>`).join('');
+  ms.value=currentDayIdx;
+
+  const lbtn=document.getElementById('lodging-sidebar-label');
+  const tripLodging=tr.lodging;
+  lbtn.textContent=tripLodging?`${tripLodging.name}`:'Add lodging';
+}
+
+function selectDay(i){
+  currentDayIdx=i;
+  currentMapDayIdx=i;
+  renderSidebar();
+  // if we're in map view, keep showing that day on the map
+  const mapVisible=document.getElementById('view-map-wrapper').style.display!=='none';
+  if(mapVisible){setMapMode('day');}
+  else{renderDay();}
+}
+
+function addDay(){
+  const tr=currentTrip();if(!tr)return;
+  tr.days.push({id:uid(),label:`Day ${tr.days.length+1}`,activities:[],lodging:null});
+  save();selectDay(tr.days.length-1);
+}
+
+function renameDay(i){
+  const tr=currentTrip();if(!tr)return;
+  const day=tr.days[i];
+  showModal('Rename day','',`<div class="form-group"><label>Label</label><input type="text" id="rename-day-val" value="${esc(day.label)}"/></div>`,[
+    {label:'Cancel',cls:'btn-secondary',fn:'closeModal()'},
+    {label:'Save',cls:'btn-primary',fn:`doRenameDay(${i})`},
+    {label:'Delete day',cls:'btn-danger',fn:`confirmDeleteDay(${i})`},
+  ]);
+  setTimeout(()=>{const inp=document.getElementById('rename-day-val');if(inp){inp.focus();inp.select();}},50);
+}
+function doRenameDay(i){
+  const val=(document.getElementById('rename-day-val')?.value||'').trim();if(!val)return;
+  const tr=currentTrip();if(!tr)return;
+  tr.days[i].label=val;save();closeModal();renderSidebar();renderDay();showToast('Day renamed.');
+}
+function confirmDeleteDay(i){
+  closeModal();
+  const tr=currentTrip();if(!tr)return;
+  const day=tr.days[i];
+  showModal('Delete day',`Delete "${day.label}"? All ${day.activities.length} activities will be removed.`,'',[
+    {label:'Cancel',cls:'btn-secondary',fn:'closeModal()'},
+    {label:'Delete',cls:'btn-danger',fn:`doDeleteDay(${i})`},
+  ]);
+}
+function doDeleteDay(i){
+  const tr=currentTrip();if(!tr)return;
+  tr.days.splice(i,1);save();closeModal();
+  currentDayIdx=Math.min(currentDayIdx,tr.days.length-1);
+  if(tr.days.length===0){addDay();}else{renderSidebar();renderDay();}
+  showToast('Day deleted.');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Day detail / Activities (with numbering + drag reorder)
+// ─────────────────────────────────────────────────────────────────────────
+function renderDay(){
+  const tr=currentTrip(),day=currentDay();if(!tr||!day)return;
+  document.getElementById('day-title').textContent=day.label;
+  document.getElementById('day-subtitle').textContent=tr.startDate?formatDate(tr.startDate,currentDayIdx):'';
+
+  // Lodging banner
+  const banner=document.getElementById('day-lodging-banner');
+  const lodging=effectiveLodging(day,tr);
+  if(lodging){
+    const isOverride=!!day.lodging;
+    banner.innerHTML=`
+      <div class="lodging-banner">
+        <div class="li">🏨</div>
+        <div class="lodging-banner-body">
+          <div class="lb-label">${isOverride?'Lodging (this day)':'Lodging'}</div>
+          <div class="lb-name">${esc(lodging.name)}</div>
+          ${lodging.address?`<div class="lb-addr">${esc(lodging.address)}</div>`:''}
+        </div>
+        <div class="lb-actions">
+          ${isAdmin()?`<button class="tile-action-btn" onclick="openLodging(${isOverride?"'day'":"'trip'"})">Edit</button>`:''}
+          ${lodging.lat&&lodging.lng?`<button class="tile-map-btn" onclick="switchView('map');highlightLodgingPin()">Map →</button>`:''}
+        </div>
+      </div>`;
+  }else{
+    banner.innerHTML='';
+  }
+
+  const list=document.getElementById('activities-list');
+  // IMPORTANT: activities are now in explicit order (day.order array of ids), not sorted by time,
+  // so drag-and-drop reordering is meaningful. Time is still shown but no longer used to sort.
+  ensureOrder(day);
+  const ordered=day.order.map(id=>day.activities.find(a=>a.id===id)).filter(Boolean);
+
+  if(!ordered.length){
+    list.innerHTML=`<div class="empty-state"><div class="empty-icon">📋</div><p>No activities yet${isAdmin()?' — add one below':' for this day'}.</p></div>`;
+    return;
+  }
+
+  let mapNum=0;
+  list.innerHTML=ordered.map((act,idx)=>{
+    const cat=getCat(act.catId);
+    const onMap=act.lat&&act.lng&&!act.hideFromMap;
+    if(onMap)mapNum++;
+    const color=DAY_COLORS[currentDayIdx%DAY_COLORS.length];
+    const travelStr=act.travelMin?`${act.transportTags&&act.transportTags[0]?act.transportTags[0]+' ':''}${act.travelMin} min from prev.`:'';
+    return`<div class="activity-tile" draggable="${isAdmin()}" data-id="${act.id}" data-idx="${idx}"
+        ${isAdmin()?`ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dragDrop(event)" ondragend="dragEnd(event)" ondragleave="dragLeave(event)"`:''}>
+      <div class="tile-number-col">
+        ${onMap?`<div class="tile-number" style="background:${color}">${mapNum}</div>`:`<div class="tile-number tile-number-offmap" title="Not shown on map">−</div>`}
+        ${isAdmin()?`<span class="tile-drag-handle" title="Drag to reorder">⠿</span>`:''}
+      </div>
+      <div class="tile-body">
+        <div class="tile-badges">
+          <span class="badge badge-cat" style="background:${hexAlpha(cat.color,.15)};color:${cat.color}">${esc(cat.name)}</span>
+          ${act.reserved?'<span class="badge badge-reserved">🔒 Reserved</span>':''}
+          ${act.hideFromMap?'<span class="badge badge-offmap">🚫 Off map</span>':''}
+        </div>
+        <div class="tile-name">${esc(act.name)}</div>
+        <div class="tile-time">${[act.time?formatTime(act.time):'',act.durationMin?formatDuration(act.durationMin):''].filter(Boolean).join(' · ')}</div>
+        ${travelStr?`<div class="tile-travel">${esc(travelStr)}</div>`:''}
+        ${act.routeNotes?`<div class="tile-route"><span>↳</span><span>${esc(act.routeNotes)}</span></div>`:''}
+        ${act.notes?`<div class="tile-notes">${esc(act.notes)}</div>`:''}
+        <div class="tile-actions">
+          ${isAdmin()?`<button class="tile-action-btn" onclick="editActivity('${act.id}')">Edit</button>`:''}
+          ${isAdmin()?`<button class="tile-action-btn" onclick="openMoveActivity('${act.id}')">Move to…</button>`:''}
+          ${isAdmin()?`<button class="tile-action-btn danger" onclick="confirmDeleteActivity('${act.id}')">Delete</button>`:''}
+          ${onMap?`<button class="tile-map-btn" onclick="switchView('map');highlightPin('${act.id}')">See on map →</button>`:''}
+          ${act.mapsLink?`<a href="${esc(act.mapsLink)}" target="_blank" class="tile-map-btn" style="margin-left:auto">Google Maps ↗</a>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function ensureOrder(day){
+  if(!day.order)day.order=[];
+  // add any activity ids not yet in order (new ones), sorted by time as a sane default
+  const known=new Set(day.order);
+  const missing=day.activities.filter(a=>!known.has(a.id)).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  day.order.push(...missing.map(a=>a.id));
+  // remove ids that no longer exist
+  const existing=new Set(day.activities.map(a=>a.id));
+  day.order=day.order.filter(id=>existing.has(id));
+}
+
+// Drag and drop
+function dragStart(e){
+  const tile=e.currentTarget;
+  dragSrcIdx=parseInt(tile.dataset.idx);
+  tile.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',tile.dataset.id);
+}
+function dragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  e.currentTarget.classList.add('drag-over');
+}
+function dragLeave(e){e.currentTarget.classList.remove('drag-over');}
+function dragDrop(e){
+  e.preventDefault();
+  const tile=e.currentTarget;
+  tile.classList.remove('drag-over');
+  const targetIdx=parseInt(tile.dataset.idx);
+  if(dragSrcIdx===null||dragSrcIdx===targetIdx)return;
+  const day=currentDay();if(!day)return;
+  ensureOrder(day);
+  const moved=day.order.splice(dragSrcIdx,1)[0];
+  day.order.splice(targetIdx,0,moved);
+  save();renderDay();
+}
+function dragEnd(e){
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.activity-tile.drag-over').forEach(t=>t.classList.remove('drag-over'));
+  dragSrcIdx=null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Activity form
+// ─────────────────────────────────────────────────────────────────────────
+function buildCatSelect(){
+  document.getElementById('f-cat').innerHTML=state.categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+}
+
+function openActivityForm(actId){
+  if(!isAdmin())return;
+  buildCatSelect();
+  transportSelected=[];
+  document.querySelectorAll('#transport-tags .transport-tag').forEach(t=>t.classList.remove('selected'));
+  document.getElementById('geo-results').style.display='none';
+  document.getElementById('geo-results').innerHTML='';
+  document.getElementById('geo-search-input').value='';
+  document.getElementById('geo-coords-display').textContent='';
+
+  if(actId){
+    const day=currentDay();if(!day)return;
+    const act=day.activities.find(a=>a.id===actId);if(!act)return;
+    document.getElementById('form-title').textContent='Edit activity';
+    document.getElementById('edit-id').value=actId;
+    document.getElementById('f-name').value=act.name||'';
+    document.getElementById('f-cat').value=act.catId||'';
+    document.getElementById('f-time').value=act.time||'';
+    document.getElementById('f-duration').value=act.durationMin||'';
+    document.getElementById('f-reserved').checked=!!act.reserved;
+    document.getElementById('f-hide-map').checked=!!act.hideFromMap;
+    document.getElementById('f-location').value=act.location||'';
+    document.getElementById('f-lat').value=act.lat||'';
+    document.getElementById('f-lng').value=act.lng||'';
+    document.getElementById('f-travel').value=act.travelMin||'';
+    document.getElementById('f-maps').value=act.mapsLink||'';
+    document.getElementById('f-route').value=act.routeNotes||'';
+    document.getElementById('f-notes').value=act.notes||'';
+    transportSelected=act.transportTags?[...act.transportTags]:[];
+    document.querySelectorAll('#transport-tags .transport-tag').forEach(t=>{
+      if(transportSelected.includes(t.dataset.label))t.classList.add('selected');
+    });
+    if(act.lat&&act.lng)document.getElementById('geo-coords-display').textContent=`📍 ${(+act.lat).toFixed(5)}, ${(+act.lng).toFixed(5)}`;
+  }else{
+    document.getElementById('form-title').textContent='Add activity';
+    document.getElementById('edit-id').value='';
+    ['f-name','f-time','f-duration','f-location','f-lat','f-lng','f-travel','f-maps','f-route','f-notes'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.value='';
+    });
+    document.getElementById('f-reserved').checked=false;
+    document.getElementById('f-hide-map').checked=false;
+  }
+  document.getElementById('form-panel').classList.add('open');
+  document.getElementById('form-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-name').focus(),100);
+}
+function closeActivityForm(){
+  document.getElementById('form-panel').classList.remove('open');
+  document.getElementById('form-overlay').classList.remove('open');
+}
+function toggleTransport(btn){
+  const lbl=btn.dataset.label;
+  const idx=transportSelected.indexOf(lbl);
+  if(idx>=0){transportSelected.splice(idx,1);btn.classList.remove('selected');}
+  else{transportSelected.push(lbl);btn.classList.add('selected');}
+}
+
+function saveActivity(){
+  const name=(document.getElementById('f-name').value||'').trim();
+  if(!name){document.getElementById('f-name').focus();return;}
+  const day=currentDay();if(!day)return;
+  const act={
+    id:document.getElementById('edit-id').value||uid(),
+    name,
+    catId:document.getElementById('f-cat').value,
+    time:document.getElementById('f-time').value,
+    durationMin:parseInt(document.getElementById('f-duration').value)||0,
+    reserved:document.getElementById('f-reserved').checked,
+    hideFromMap:document.getElementById('f-hide-map').checked,
+    location:document.getElementById('f-location').value.trim(),
+    lat:parseFloat(document.getElementById('f-lat').value)||null,
+    lng:parseFloat(document.getElementById('f-lng').value)||null,
+    travelMin:parseInt(document.getElementById('f-travel').value)||0,
+    mapsLink:document.getElementById('f-maps').value.trim(),
+    transportTags:[...transportSelected],
+    routeNotes:document.getElementById('f-route').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(),
+  };
+  const editId=document.getElementById('edit-id').value;
+  ensureOrder(day);
+  if(editId){
+    const idx=day.activities.findIndex(a=>a.id===editId);
+    if(idx>=0)day.activities[idx]=act;
+  }else{
+    day.activities.push(act);
+    day.order.push(act.id);
+  }
+  save();closeActivityForm();renderSidebar();renderDay();showToast(editId?'Activity updated.':'Activity added.');
+}
+function editActivity(id){openActivityForm(id);}
+function confirmDeleteActivity(id){
+  const day=currentDay();if(!day)return;
+  const act=day.activities.find(a=>a.id===id);if(!act)return;
+  showModal('Delete activity',`Delete "${act.name}"? This cannot be undone.`,'',[
+    {label:'Cancel',cls:'btn-secondary',fn:'closeModal()'},
+    {label:'Delete',cls:'btn-danger',fn:`doDeleteActivity('${id}')`},
+  ]);
+}
+function doDeleteActivity(id){
+  const day=currentDay();if(!day)return;
+  day.activities=day.activities.filter(a=>a.id!==id);
+  if(day.order)day.order=day.order.filter(oid=>oid!==id);
+  save();closeModal();renderSidebar();renderDay();showToast('Activity deleted.');
+}
+
+function openMoveActivity(id){
+  const tr=currentTrip();if(!tr)return;
+  const day=currentDay();if(!day)return;
+  const act=day.activities.find(a=>a.id===id);if(!act)return;
+  const otherDays=tr.days.map((d,i)=>({d,i})).filter(x=>x.i!==currentDayIdx);
+  if(!otherDays.length){showToast('No other days to move this activity to.');return;}
+  const options=otherDays.map(x=>`<option value="${x.i}">${esc(x.d.label)}${tr.startDate?' · '+formatDate(tr.startDate,x.i):''}</option>`).join('');
+  showModal('Move activity',`Move "${act.name}" to a different day.`,`
+    <div class="form-group"><label>Destination day</label><select id="move-target-day">${options}</select></div>
+  `,[
+    {label:'Cancel',cls:'btn-secondary',fn:'closeModal()'},
+    {label:'Move',cls:'btn-primary',fn:`doMoveActivity('${id}')`},
+  ]);
+}
+function doMoveActivity(id){
+  const tr=currentTrip();if(!tr)return;
+  const fromDay=currentDay();if(!fromDay)return;
+  const targetIdx=parseInt(document.getElementById('move-target-day')?.value);
+  if(isNaN(targetIdx))return;
+  const toDay=tr.days[targetIdx];if(!toDay)return;
+  const act=fromDay.activities.find(a=>a.id===id);if(!act)return;
+
+  fromDay.activities=fromDay.activities.filter(a=>a.id!==id);
+  if(fromDay.order)fromDay.order=fromDay.order.filter(oid=>oid!==id);
+
+  if(!toDay.activities)toDay.activities=[];
+  toDay.activities.push(act);
+  if(!toDay.order)toDay.order=[];
+  toDay.order.push(act.id);
+
+  save();closeModal();
+  currentDayIdx=targetIdx;
+  renderSidebar();renderDay();
+  showToast(`Moved to ${toDay.label}.`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Expenses
+// ─────────────────────────────────────────────────────────────────────────
+const EXP_ICONS={food:'🍽',transport:'🚌',accommodation:'🏨',activity:'🎟',shopping:'🛍',other:'📦'};
+const EXP_LABELS={food:'Food & drink',transport:'Transport',accommodation:'Accommodation',activity:'Activity / ticket',shopping:'Shopping',other:'Other'};
+let expSplitType='group';
+
+function initTripExpenses(trip){if(!trip.expenses)trip.expenses=[];}
+
+function renderExpenses(){
+  const tr=currentTrip();if(!tr)return;
+  initTripExpenses(tr);
+  const tripCurrency=tr.expenses.length?(tr.expenses.find(e=>e.currency)||{currency:'EUR'}).currency:'EUR';
+  document.getElementById('exp-subtitle').textContent=tr.name;
+  document.getElementById('add-expense-btn').style.display=isAdmin()?'':'none';
+  document.getElementById('add-expense-btn-bottom').style.display=isAdmin()?'':'none';
+
+  // ── Summary ──
+  const exps=tr.expenses;
+  let grandTotal=0, grandPP=0;
+  // group by currency for multi-currency trips — use first-found as display currency
+  exps.forEach(e=>{
+    const amt=parseFloat(e.amount)||0;
+    grandTotal+=amt;
+    grandPP+=e.splitType==='pp'?amt:(amt/(parseInt(e.people)||1));
+  });
+
+  const fmt=(n,cur=tripCurrency)=>`${(cur||'').toUpperCase()} ${n.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+  document.getElementById('exp-summary').innerHTML=`
+    ${isAdmin()?`<div class="exp-summary-card">
+      <div class="esc-label">Total spent</div>
+      <div class="esc-value">${fmt(grandTotal)}</div>
+      <div class="esc-sub">${exps.length} expense${exps.length!==1?'s':''}</div>
+    </div>`:''}
+    <div class="exp-summary-card accent">
+      <div class="esc-label">Per person</div>
+      <div class="esc-value">${fmt(grandPP)}</div>
+      <div class="esc-sub">${isAdmin()?'your share of the total':`${exps.length} expense${exps.length!==1?'s':''}`}</div>
+    </div>
+  `;
+
+  // ── List grouped by day ──
+  const listEl=document.getElementById('exp-list');
+  if(!exps.length){
+    listEl.innerHTML=`<div class="exp-empty"><div class="empty-icon">💸</div><p>${isAdmin()?'No expenses yet — add one below.':'No expenses recorded.'}</p></div>`;
+    return;
+  }
+
+  // Group: first by day index (-1 = unassigned), then "Trip-wide"
+  const groups={};
+  exps.forEach(e=>{
+    const key=e.dayIdx!==undefined&&e.dayIdx!==null?e.dayIdx:'all';
+    if(!groups[key])groups[key]=[];
+    groups[key].push(e);
+  });
+
+  // Sort keys: numbered days first (by index), then 'all'
+  const sortedKeys=Object.keys(groups).sort((a,b)=>{
+    if(a==='all')return 1;if(b==='all')return-1;return parseInt(a)-parseInt(b);
+  });
+
+  listEl.innerHTML=sortedKeys.map(key=>{
+    const dayExps=groups[key];
+    const dayLabel=key==='all'?'Trip-wide':(tr.days[key]?tr.days[key].label:`Day ${parseInt(key)+1}`);
+    const dayDate=key!=='all'&&tr.startDate?` · ${formatDate(tr.startDate,parseInt(key))}`:'';
+    const groupTotal=dayExps.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+    const groupPP=dayExps.reduce((s,e)=>{const a=parseFloat(e.amount)||0;return s+(e.splitType==='pp'?a:a/(parseInt(e.people)||1));},0);
+
+    const rows=dayExps.map(e=>{
+      const amt=parseFloat(e.amount)||0;
+      const pp=e.splitType==='pp'?amt:amt/(parseInt(e.people)||1);
+      const cur=(e.currency||'EUR').toUpperCase();
+      const ppStyle='';
+      const ppStr=`${cur} ${pp.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2})} /pp`;
+      const ppDetail=isAdmin()&&e.splitType!=='pp'?` (${(parseInt(e.people)||1)}p)`:'';
+      return`<div class="exp-row">
+        <div class="exp-row-icon">${EXP_ICONS[e.category]||'📦'}</div>
+        <div class="exp-row-body">
+          <div class="exp-row-name">${esc(e.name)}</div>
+          <div class="exp-row-meta">${EXP_LABELS[e.category]||'Other'}${e.notes?` · ${esc(e.notes)}`:''}</div>
+        </div>
+        <div class="exp-row-right">
+          <div class="exp-row-amount">${cur} ${amt.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+          <div class="exp-row-pp">${ppStr}${ppDetail}</div>
+        </div>
+        ${isAdmin()?`<div class="exp-row-actions">
+          <button class="exp-row-btn" onclick="openExpenseForm('${e.id}')">✏</button>
+          <button class="exp-row-btn del" onclick="deleteExpense('${e.id}')">✕</button>
+        </div>`:''}
+      </div>`;
+    }).join('');
+
+    return`<div class="exp-day-group">
+      <div class="exp-day-group-header">
+        <span class="edg-label">${esc(dayLabel)}${dayDate}</span>
+        <span class="edg-total">${(tripCurrency||'EUR').toUpperCase()} ${groupTotal.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2})} · ${(tripCurrency||'EUR').toUpperCase()} ${groupPP.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2})}/pp</span>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+function openExpenseForm(expId){
+  if(!isAdmin())return;
+  const tr=currentTrip();if(!tr)return;
+  initTripExpenses(tr);
+  expSplitType='group';
+  setSplitType('group');
+
+  // populate day dropdown
+  const daySelect=document.getElementById('exp-day');
+  daySelect.innerHTML=`<option value="all">Trip-wide (no specific day)</option>`
+    +tr.days.map((d,i)=>`<option value="${i}">${esc(d.label)}${tr.startDate?' · '+formatDate(tr.startDate,i):''}</option>`).join('');
+
+  if(expId){
+    const exp=tr.expenses.find(e=>e.id===expId);if(!exp)return;
+    document.getElementById('expense-form-title').textContent='Edit expense';
+    document.getElementById('exp-edit-id').value=expId;
+    document.getElementById('exp-name').value=exp.name||'';
+    document.getElementById('exp-amount').value=exp.amount||'';
+    document.getElementById('exp-currency').value=exp.currency||'EUR';
+    document.getElementById('exp-notes').value=exp.notes||'';
+    document.getElementById('exp-category').value=exp.category||'other';
+    document.getElementById('exp-people').value=exp.people||2;
+    daySelect.value=exp.dayIdx!==null&&exp.dayIdx!==undefined?exp.dayIdx:'all';
+    setSplitType(exp.splitType||'group');
+  }else{
+    document.getElementById('expense-form-title').textContent='Add expense';
+    document.getElementById('exp-edit-id').value='';
+    document.getElementById('exp-name').value='';
+    document.getElementById('exp-amount').value='';
+    document.getElementById('exp-currency').value=tr.expenses.length?(tr.expenses[0].currency||'EUR'):'EUR';
+    document.getElementById('exp-notes').value='';
+    document.getElementById('exp-category').value='food';
+    document.getElementById('exp-people').value=2;
+    daySelect.value=currentView()==='expenses'?'all':(currentDayIdx!==null?currentDayIdx:'all');
+  }
+
+  document.getElementById('expense-panel').classList.add('open');
+  document.getElementById('form-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('exp-name').focus(),80);
+}
+
+function closeExpenseForm(){
+  document.getElementById('expense-panel').classList.remove('open');
+  document.getElementById('form-overlay').classList.remove('open');
+}
+
+function setSplitType(type){
+  expSplitType=type;
+  document.getElementById('split-tab-group').classList.toggle('active',type==='group');
+  document.getElementById('split-tab-pp').classList.toggle('active',type==='pp');
+  document.getElementById('exp-people-group').style.display=type==='group'?'':'none';
+}
+
+function saveExpense(){
+  const name=(document.getElementById('exp-name').value||'').trim();
+  if(!name){document.getElementById('exp-name').focus();return;}
+  const amount=parseFloat(document.getElementById('exp-amount').value);
+  if(!amount||amount<=0){document.getElementById('exp-amount').focus();return;}
+  const tr=currentTrip();if(!tr)return;
+  initTripExpenses(tr);
+  const dayRaw=document.getElementById('exp-day').value;
+  const dayIdx=dayRaw==='all'?null:parseInt(dayRaw);
+  const exp={
+    id:document.getElementById('exp-edit-id').value||uid(),
+    name,amount,
+    currency:(document.getElementById('exp-currency').value||'EUR').toUpperCase().slice(0,5),
+    splitType:expSplitType,
+    people:expSplitType==='group'?(parseInt(document.getElementById('exp-people').value)||1):1,
+    category:document.getElementById('exp-category').value,
+    dayIdx,
+    notes:document.getElementById('exp-notes').value.trim(),
+  };
+  const editId=document.getElementById('exp-edit-id').value;
+  if(editId){const idx=tr.expenses.findIndex(e=>e.id===editId);if(idx>=0)tr.expenses[idx]=exp;}
+  else tr.expenses.push(exp);
+  save();closeExpenseForm();renderExpenses();showToast(editId?'Expense updated.':'Expense added.');
+}
+
+function deleteExpense(id){
+  const tr=currentTrip();if(!tr)return;
+  tr.expenses=tr.expenses.filter(e=>e.id!==id);
+  save();renderExpenses();showToast('Expense deleted.');
+}
+
+function currentView(){
+  if(document.getElementById('view-expenses-wrapper').style.display!=='none')return'expenses';
+  if(document.getElementById('view-map-wrapper').style.display!=='none')return'map';
+  return'day';
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Geocoder (Nominatim) — shared helper used by both activity & lodging forms
+// ─────────────────────────────────────────────────────────────────────────
+let geoAbort=null;
+async function runGeoSearch(query,resultsElId,onSelectFnName){
+  const res=document.getElementById(resultsElId);
+  res.style.display='block';res.innerHTML='<div class="geo-loading">Searching…</div>';
+  if(geoAbort)geoAbort.abort();
+  geoAbort=new AbortController();
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}`,{signal:geoAbort.signal,headers:{'Accept-Language':'en'}});
+    const data=await r.json();
+    if(!data.length){res.innerHTML='<div class="geo-loading">No results found.</div>';return;}
+    res.innerHTML=data.map(item=>{
+      const safeName=esc(item.display_name).replace(/'/g,"\\'");
+      return `<div class="geo-result-item" onclick="${onSelectFnName}(${item.lat},${item.lon},'${safeName}')">
+        <div class="geo-name">${esc(item.display_name.split(',')[0])}</div>
+        <div class="geo-addr">${esc(item.display_name.split(',').slice(1,3).join(',').trim())}</div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    if(e.name!=='AbortError')res.innerHTML='<div class="geo-loading">Search failed. Check your connection.</div>';
+  }
+}
+
+function geoSearch(){
+  const q=(document.getElementById('geo-search-input').value||'').trim();
+  if(!q)return;
+  runGeoSearch(q,'geo-results','selectGeoResult');
+}
+function selectGeoResult(lat,lng,displayName){
+  document.getElementById('f-lat').value=parseFloat(lat).toFixed(6);
+  document.getElementById('f-lng').value=parseFloat(lng).toFixed(6);
+  if(!document.getElementById('f-location').value){
+    document.getElementById('f-location').value=displayName.split(',').slice(0,2).join(',').trim();
+  }
+  document.getElementById('geo-coords-display').textContent=`📍 ${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}`;
+  document.getElementById('geo-results').style.display='none';
+  document.getElementById('geo-search-input').value='';
+}
+
+function lgGeoSearch(){
+  const q=(document.getElementById('lg-geo-search-input').value||'').trim();
+  if(!q)return;
+  runGeoSearch(q,'lg-geo-results','selectLgGeoResult');
+}
+function selectLgGeoResult(lat,lng,displayName){
+  document.getElementById('lg-lat').value=parseFloat(lat).toFixed(6);
+  document.getElementById('lg-lng').value=parseFloat(lng).toFixed(6);
+  if(!document.getElementById('lg-address').value){
+    document.getElementById('lg-address').value=displayName.split(',').slice(0,3).join(',').trim();
+  }
+  document.getElementById('lg-geo-coords-display').textContent=`📍 ${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}`;
+  document.getElementById('lg-geo-results').style.display='none';
+  document.getElementById('lg-geo-search-input').value='';
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Lodging
+// ─────────────────────────────────────────────────────────────────────────
+function openLodging(forceScope){
+  if(!isAdmin())return;
+  const tr=currentTrip();if(!tr)return;
+  lodgingScope=forceScope||'trip';
+  setLodgingScopeUI();
+  renderLodgingExistingBox();
+  loadLodgingIntoForm();
+  document.getElementById('lodging-panel').classList.add('open');
+  document.getElementById('form-overlay').classList.add('open');
+}
+function closeLodging(){
+  document.getElementById('lodging-panel').classList.remove('open');
+  document.getElementById('form-overlay').classList.remove('open');
+}
+function setLodgingScope(s){lodgingScope=s;setLodgingScopeUI();renderLodgingExistingBox();loadLodgingIntoForm();}
+function setLodgingScopeUI(){
+  document.getElementById('lodging-tab-trip').classList.toggle('active',lodgingScope==='trip');
+  document.getElementById('lodging-tab-day').classList.toggle('active',lodgingScope==='day');
+  document.getElementById('lodging-form-title').textContent=lodgingScope==='trip'?'Trip lodging (default)':`Lodging for ${currentDay()?currentDay().label:'this day'}`;
+}
+function getLodgingForScope(){
+  const tr=currentTrip(),day=currentDay();
+  return lodgingScope==='trip'?(tr?tr.lodging:null):(day?day.lodging:null);
+}
+function renderLodgingExistingBox(){
+  const box=document.getElementById('lodging-existing-box');
+  const lg=getLodgingForScope();
+  if(lg){
+    box.innerHTML=`<div class="lodging-existing"><div class="le-name">🏨 ${esc(lg.name)}</div>${lg.address?`<div class="le-addr">${esc(lg.address)}</div>`:''}</div>`;
+  }else{
+    box.innerHTML='';
+  }
+}
+function loadLodgingIntoForm(){
+  const lg=getLodgingForScope();
+  document.getElementById('lg-geo-results').style.display='none';
+  document.getElementById('lg-geo-search-input').value='';
+  document.getElementById('lg-remove-btn').style.display=lg?'':'none';
+  if(lg){
+    document.getElementById('lg-name').value=lg.name||'';
+    document.getElementById('lg-address').value=lg.address||'';
+    document.getElementById('lg-lat').value=lg.lat||'';
+    document.getElementById('lg-lng').value=lg.lng||'';
+    document.getElementById('lg-checkin').value=lg.checkin||'';
+    document.getElementById('lg-checkout').value=lg.checkout||'';
+    document.getElementById('lg-link').value=lg.link||'';
+    document.getElementById('lg-notes').value=lg.notes||'';
+    document.getElementById('lg-geo-coords-display').textContent=(lg.lat&&lg.lng)?`📍 ${(+lg.lat).toFixed(5)}, ${(+lg.lng).toFixed(5)}`:'';
+  }else{
+    ['lg-name','lg-address','lg-lat','lg-lng','lg-checkin','lg-checkout','lg-link','lg-notes'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('lg-geo-coords-display').textContent='';
+  }
+}
+function saveLodging(){
+  const name=(document.getElementById('lg-name').value||'').trim();
+  if(!name){document.getElementById('lg-name').focus();return;}
+  const lg={
+    name,
+    address:document.getElementById('lg-address').value.trim(),
+    lat:parseFloat(document.getElementById('lg-lat').value)||null,
+    lng:parseFloat(document.getElementById('lg-lng').value)||null,
+    checkin:document.getElementById('lg-checkin').value,
+    checkout:document.getElementById('lg-checkout').value,
+    link:document.getElementById('lg-link').value.trim(),
+    notes:document.getElementById('lg-notes').value.trim(),
+  };
+  const tr=currentTrip(),day=currentDay();
+  if(lodgingScope==='trip'){if(tr)tr.lodging=lg;}else{if(day)day.lodging=lg;}
+  save();closeLodging();renderSidebar();renderDay();showToast('Lodging saved.');
+}
+function removeLodging(){
+  const tr=currentTrip(),day=currentDay();
+  if(lodgingScope==='trip'){if(tr)tr.lodging=null;}else{if(day)day.lodging=null;}
+  save();closeLodging();renderSidebar();renderDay();showToast('Lodging removed.');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Map
+// ─────────────────────────────────────────────────────────────────────────
+function initMap(){
+  if(mapInstance)return;
+  mapInstance=L.map('map-container',{zoomControl:true}).setView([41.9,12.5],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(mapInstance);
+}
+function clearMapLayers(){mapMarkers.forEach(m=>m.remove());mapPolylines.forEach(p=>p.remove());mapMarkers=[];mapPolylines=[];}
+
+function makeIcon(num,color){
+  return L.divIcon({
+    html:`<div style="background:${color};color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff">${num}</div>`,
+    className:'',iconSize:[28,28],iconAnchor:[14,14]
+  });
+}
+function makeLodgingIcon(color){
+  return L.divIcon({
+    html:`<div style="background:${color};color:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,.35);border:2px solid #fff;transform:rotate(0deg)">🏨</div>`,
+    className:'',iconSize:[30,30],iconAnchor:[15,15]
+  });
+}
+
+function getOrderedActivitiesForDay(day){
+  ensureOrder(day);
+  return day.order.map(id=>day.activities.find(a=>a.id===id)).filter(Boolean).filter(a=>a.lat&&a.lng&&!a.hideFromMap);
+}
+
+function renderMap(){
+  const tr=currentTrip();if(!tr)return;
+  clearMapLayers();closeMapPopup();closeMapDetail();
+  const daySwitch=document.getElementById('map-day-switcher');
+  const legend=document.getElementById('map-legend');
+
+  if(currentMapMode==='day'){
+    daySwitch.style.display='block';legend.style.display='none';
+    const ms=document.getElementById('map-day-select');
+    ms.innerHTML=tr.days.map((d,i)=>`<option value="${i}">${esc(d.label)}</option>`).join('');
+    ms.value=currentMapDayIdx;
+    const day=tr.days[currentMapDayIdx];if(!day)return;
+    const sorted=getOrderedActivitiesForDay(day);
+    const color=DAY_COLORS[currentMapDayIdx%DAY_COLORS.length];
+    const allPins=[...sorted];
+    renderDayPins(sorted,color,currentMapDayIdx);
+    const lodging=effectiveLodging(day,tr);
+    if(lodging&&lodging.lat&&lodging.lng){
+      renderLodgingPin(lodging,currentMapDayIdx);
+      allPins.push(lodging);
+    }
+    if(allPins.length)fitPins(allPins);
+  }else{
+    daySwitch.style.display='none';legend.style.display='block';
+    let lhtml='';
+    tr.days.forEach((d,i)=>{
+      const c=DAY_COLORS[i%DAY_COLORS.length];
+      lhtml+=`<div class="legend-day" onclick="setMapMode('day');currentMapDayIdx=${i};renderMap()"><div class="legend-dot" style="background:${c}"></div><span>${esc(d.label)}</span></div>`;
+    });
+    lhtml+=`<div class="legend-day"><div class="legend-dot" style="background:${LODGING_COLOR}"></div><span>Lodging</span></div>`;
+    legend.innerHTML=lhtml;
+    const all=[];
+    const seenLodgingKeys=new Set();
+    tr.days.forEach((d,i)=>{
+      const c=DAY_COLORS[i%DAY_COLORS.length];
+      const sorted=getOrderedActivitiesForDay(d);
+      renderDayPins(sorted,c,i);all.push(...sorted);
+      const lodging=effectiveLodging(d,tr);
+      if(lodging&&lodging.lat&&lodging.lng){
+        const key=lodging.name+lodging.lat+lodging.lng;
+        if(!seenLodgingKeys.has(key)){
+          seenLodgingKeys.add(key);
+          renderLodgingPin(lodging,i);
+          all.push(lodging);
+        }
+      }
+    });
+    if(all.length)fitPins(all);
+  }
+}
+
+function renderDayPins(acts,color,dayIdx){
+  if(!acts.length)return;
+  const coords=[];
+  acts.forEach((act,n)=>{
+    const m=L.marker([act.lat,act.lng],{icon:makeIcon(n+1,color)}).addTo(mapInstance).on('click',()=>showMapPopup(act,dayIdx,'activity'));
+    mapMarkers.push(m);coords.push([act.lat,act.lng]);
+  });
+  if(coords.length>1){const p=L.polyline(coords,{color,weight:2,dashArray:'6 5',opacity:.7}).addTo(mapInstance);mapPolylines.push(p);}
+}
+function renderLodgingPin(lodging,dayIdx){
+  const m=L.marker([lodging.lat,lodging.lng],{icon:makeLodgingIcon(LODGING_COLOR)}).addTo(mapInstance).on('click',()=>showMapPopup(lodging,dayIdx,'lodging'));
+  mapMarkers.push(m);
+}
+function fitPins(items){
+  const v=items.filter(a=>a.lat&&a.lng);
+  if(!v.length)return;
+  if(v.length===1){mapInstance.setView([v[0].lat,v[0].lng],15);return;}
+  mapInstance.fitBounds(v.map(a=>[a.lat,a.lng]),{padding:[40,40]});
+}
+function setMapMode(m){
+  currentMapMode=m;if(m==='day')currentMapDayIdx=currentDayIdx;
+  document.querySelectorAll('.map-toggle-btn').forEach((b,i)=>b.classList.toggle('active',(i===0&&m==='day')||(i===1&&m==='all')));
+  renderMap();
+}
+function setMapDay(i){currentMapDayIdx=i;renderMap();}
+
+function showMapPopup(item,dayIdx,kind){
+  activePopupActivity={act:item,dayIdx,kind};
+  const ppCat=document.getElementById('pp-cat');
+  if(kind==='lodging'){
+    ppCat.textContent='Lodging';ppCat.classList.add('lodging');
+    document.getElementById('pp-time').textContent=[item.checkin?'Check-in '+formatTime(item.checkin):'',item.checkout?'Check-out '+formatTime(item.checkout):''].filter(Boolean).join(' · ');
+  }else{
+    const cat=getCat(item.catId);
+    ppCat.textContent=cat.name;ppCat.classList.remove('lodging');
+    document.getElementById('pp-time').textContent=[item.time?formatTime(item.time):'',item.durationMin?formatDuration(item.durationMin):''].filter(Boolean).join(' · ');
+  }
+  document.getElementById('pp-name').textContent=item.name;
+  const popup=document.getElementById('map-popup');
+  const pt=mapInstance.latLngToContainerPoint([item.lat,item.lng]);
+  popup.style.display='block';
+  requestAnimationFrame(()=>{
+    popup.style.left=Math.max(4,Math.min(pt.x-popup.offsetWidth/2,window.innerWidth-popup.offsetWidth-4))+'px';
+    popup.style.top=Math.max(4,pt.y-popup.offsetHeight-24)+'px';
+  });
+}
+function closeMapPopup(){document.getElementById('map-popup').style.display='none';activePopupActivity=null;}
+
+function openMapDetail(){
+  if(!activePopupActivity)return;
+  const{act,dayIdx,kind}=activePopupActivity;
+  if(kind==='lodging'){
+    document.getElementById('map-detail-content').innerHTML=`
+      <div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <span class="badge badge-cat" style="background:${hexAlpha(LODGING_COLOR,.15)};color:${LODGING_COLOR}">🏨 Lodging</span>
+        </div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:4px">${esc(act.name)}</div>
+        ${act.address?`<div style="font-size:13px;color:var(--text-3);margin-bottom:6px">📍 ${esc(act.address)}</div>`:''}
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:8px">${[act.checkin?'Check-in '+formatTime(act.checkin):'',act.checkout?'Check-out '+formatTime(act.checkout):''].filter(Boolean).join(' · ')}</div>
+        ${act.notes?`<div style="font-size:13px;color:var(--text-3);margin-bottom:8px">${esc(act.notes)}</div>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          ${isAdmin()?`<button class="tile-action-btn" onclick="closeMapDetail();switchView('day');currentDayIdx=${dayIdx};renderSidebar();renderDay();setTimeout(()=>openLodging(),100)">Edit</button>`:''}
+          ${act.link?`<a href="${esc(act.link)}" target="_blank" class="tile-action-btn" style="text-decoration:none">Booking link ↗</a>`:''}
+        </div>
+      </div>`;
+  }else{
+    const cat=getCat(act.catId);
+    const travelStr=act.travelMin?`${act.transportTags&&act.transportTags[0]?act.transportTags[0]+' ':''}${act.travelMin} min from prev.`:'';
+    document.getElementById('map-detail-content').innerHTML=`
+      <div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <span class="badge badge-cat" style="background:${hexAlpha(cat.color,.15)};color:${cat.color}">${esc(cat.name)}</span>
+          ${act.reserved?'<span class="badge badge-reserved">🔒 Reserved</span>':''}
+        </div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:4px">${esc(act.name)}</div>
+        ${act.location?`<div style="font-size:13px;color:var(--text-3);margin-bottom:6px">📍 ${esc(act.location)}</div>`:''}
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:8px">${[act.time?formatTime(act.time):'',act.durationMin?formatDuration(act.durationMin):''].filter(Boolean).join(' · ')}</div>
+        ${travelStr?`<div class="tile-travel" style="margin-bottom:10px">${esc(travelStr)}</div>`:''}
+        ${act.routeNotes?`<div class="tile-route" style="margin-bottom:8px"><span>↳</span><span style="font-size:13px">${esc(act.routeNotes)}</span></div>`:''}
+        ${act.notes?`<div style="font-size:13px;color:var(--text-3);margin-bottom:8px">${esc(act.notes)}</div>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="tile-action-btn" onclick="closeMapDetail();switchView('day');currentDayIdx=${dayIdx};renderSidebar();renderDay()">View in day</button>
+          ${isAdmin()?`<button class="tile-action-btn" onclick="closeMapDetail();switchView('day');currentDayIdx=${dayIdx};renderSidebar();renderDay();setTimeout(()=>editActivity('${act.id}'),100)">Edit</button>`:''}
+          ${act.mapsLink?`<a href="${esc(act.mapsLink)}" target="_blank" class="tile-action-btn" style="text-decoration:none">Google Maps ↗</a>`:''}
+        </div>
+      </div>`;
+  }
+  document.getElementById('map-detail').classList.add('open');
+  closeMapPopup();
+}
+function closeMapDetail(){document.getElementById('map-detail').classList.remove('open');}
+
+function highlightPin(actId){
+  setTimeout(()=>{
+    const tr=currentTrip();if(!tr)return;
+    let found=null,foundDayIdx=0;
+    tr.days.forEach((d,i)=>{const a=d.activities.find(a=>a.id===actId);if(a){found=a;foundDayIdx=i;}});
+    if(found&&found.lat&&found.lng){
+      setMapMode('day');currentMapDayIdx=foundDayIdx;renderMap();
+      setTimeout(()=>{mapInstance.setView([found.lat,found.lng],16);showMapPopup(found,foundDayIdx,'activity');},200);
+    }
+  },100);
+}
+function highlightLodgingPin(){
+  setTimeout(()=>{
+    const tr=currentTrip(),day=currentDay();if(!tr||!day)return;
+    const lodging=effectiveLodging(day,tr);
+    if(lodging&&lodging.lat&&lodging.lng){
+      setMapMode('day');currentMapDayIdx=currentDayIdx;renderMap();
+      setTimeout(()=>{mapInstance.setView([lodging.lat,lodging.lng],16);showMapPopup(lodging,currentDayIdx,'lodging');},200);
+    }
+  },100);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Categories
+// ─────────────────────────────────────────────────────────────────────────
+function openCats(){renderCatsList();document.getElementById('cats-panel').classList.add('open');document.getElementById('form-overlay').classList.add('open');}
+function closeCats(){document.getElementById('cats-panel').classList.remove('open');document.getElementById('form-overlay').classList.remove('open');}
+function renderCatsList(){
+  document.getElementById('cats-list').innerHTML=state.categories.map(cat=>`
+    <div class="cat-item">
+      <input type="color" class="cat-color-input" value="${cat.color}" title="Change color" onchange="updateCatColor('${cat.id}',this.value)"/>
+      <input class="cat-name-input" value="${esc(cat.name)}" placeholder="Category name" onchange="updateCatName('${cat.id}',this.value)" onblur="updateCatName('${cat.id}',this.value)"/>
+      <button class="cat-del" onclick="deleteCategory('${cat.id}')" title="Delete">×</button>
+    </div>
+  `).join('');
+}
+function updateCatName(id,val){val=val.trim();if(!val)return;const c=state.categories.find(c=>c.id===id);if(!c)return;c.name=val;save();}
+function updateCatColor(id,val){const c=state.categories.find(c=>c.id===id);if(!c)return;c.color=val;save();}
+function addCategory(){
+  const name=(document.getElementById('new-cat-name').value||'').trim();if(!name)return;
+  const color=document.getElementById('new-cat-color').value;
+  state.categories.push({id:uid(),name,color});save();
+  document.getElementById('new-cat-name').value='';renderCatsList();showToast('Category added.');
+}
+function deleteCategory(id){state.categories=state.categories.filter(c=>c.id!==id);save();renderCatsList();showToast('Category deleted.');}
+
+// ─────────────────────────────────────────────────────────────────────────
+// IO
+// ─────────────────────────────────────────────────────────────────────────
+function openIO(){document.getElementById('io-panel').classList.add('open');document.getElementById('form-overlay').classList.add('open');}
+function closeIO(){document.getElementById('io-panel').classList.remove('open');document.getElementById('form-overlay').classList.remove('open');}
+function exportTrip(){
+  const tr=currentTrip();if(!tr){showToast('Open a trip first.');return;}
+  const data={_triplan_export:'trip',version:2,trip:JSON.parse(JSON.stringify(tr)),categories:state.categories};
+  dlJSON(data,`${tr.name.replace(/[^a-z0-9]/gi,'_')}.json`);
+}
+function exportAll(){
+  const data={_triplan_export:'all',version:2,trips:state.trips,categories:state.categories};
+  dlJSON(data,'triplan_all.json');
+}
+function dlJSON(data,name){
+  const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);
+}
+function importData(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data._triplan_export==='trip'){
+        if(data.categories)data.categories.forEach(c=>{if(!state.categories.find(x=>x.id===c.id))state.categories.push(c);});
+        // backfill lodging/order fields for older exports
+        data.trip.lodging=data.trip.lodging||null;
+        data.trip.expenses=data.trip.expenses||[];
+        data.trip.days.forEach(d=>{d.lodging=d.lodging||null;if(!d.order)d.order=d.activities.map(a=>a.id);});
+        if(!state.trips.find(t=>t.id===data.trip.id))state.trips.push(data.trip);
+        else{data.trip.id=uid();data.trip.name+=' (imported)';state.trips.push(data.trip);}
+        save();closeIO();renderTripsGrid();showToast(`Trip "${data.trip.name}" imported.`);
+      }else if(data._triplan_export==='all'){
+        if(confirm('Merge all trips from this file?')){
+          data.trips.forEach(t=>{
+            t.lodging=t.lodging||null;
+            t.expenses=t.expenses||[];
+            t.days.forEach(d=>{d.lodging=d.lodging||null;if(!d.order)d.order=d.activities.map(a=>a.id);});
+            if(!state.trips.find(x=>x.id===t.id))state.trips.push(t);
+          });
+          if(data.categories)data.categories.forEach(c=>{if(!state.categories.find(x=>x.id===c.id))state.categories.push(c);});
+          save();closeIO();renderTripsGrid();showToast('All data imported.');
+        }
+      }else showToast('Unrecognised file format.');
+    }catch(err){showToast('Failed to read file.');}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Settings
+// ─────────────────────────────────────────────────────────────────────────
+function openSettings(){document.getElementById('settings-panel').classList.add('open');document.getElementById('form-overlay').classList.add('open');}
+function closeSettings(){document.getElementById('settings-panel').classList.remove('open');document.getElementById('form-overlay').classList.remove('open');}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Generic modal
+// ─────────────────────────────────────────────────────────────────────────
+function showModal(title,desc,bodyHTML,actions){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-desc').textContent=desc;
+  document.getElementById('modal-body').innerHTML=bodyHTML;
+  document.getElementById('modal-actions').innerHTML=actions.map(a=>`<button class="${a.cls}" onclick="${a.fn}">${a.label}</button>`).join('');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Panel management
+// ─────────────────────────────────────────────────────────────────────────
+function closeAllPanels(){
+  closeActivityForm();closeCats();closeIO();closeSettings();closeLodging();closeExpenseForm();
+  document.getElementById('form-overlay').classList.remove('open');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Keyboard
+// ─────────────────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    closeAllPanels();closeModal();closeMapDetail();closeMapPopup();closeAdminLogin();closeKebab();
+    document.getElementById('geo-results').style.display='none';
+    document.getElementById('lg-geo-results').style.display='none';
+  }
+  if(e.key==='Enter'&&document.getElementById('lockscreen').style.display!=='none'){unlockApp();}
+});
+
+['form-panel','cats-panel','io-panel','settings-panel','lodging-panel','expense-panel'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>e.stopPropagation());
+});
+document.getElementById('kebab-menu').addEventListener('click',e=>e.stopPropagation());
+document.getElementById('admin-login-overlay').addEventListener('click',e=>{if(e.target.id==='admin-login-overlay')closeAdminLogin();});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Boot
+// ─────────────────────────────────────────────────────────────────────────
+document.getElementById('lock-pw').focus();
+</script>
+</body>
+</html>
