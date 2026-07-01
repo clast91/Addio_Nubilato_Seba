@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https: data: blob:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://nominatim.openstreetmap.org https://unpkg.com https://*.tile.openstreetmap.org; img-src 'self' data: https://*.tile.openstreetmap.org https://*.openstreetmap.org; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com;"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>Triplan</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -1003,11 +1002,19 @@ async function pushToGitHub(){
   try{
     // Always fetch latest SHA before writing to avoid 422 conflicts
     {
+      console.log('Fetching SHA from GitHub API…');
       const shaRes=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`,{
         headers:{'Authorization':`token ${pat}`,'Accept':'application/vnd.github+json'}
       });
-      if(shaRes.ok){const shaData=await shaRes.json();ghFileSha=shaData.sha;}
-      else{throw new Error(`SHA fetch failed: ${shaRes.status}`);}
+      console.log('SHA fetch status:',shaRes.status);
+      if(shaRes.ok){
+        const shaData=await shaRes.json();
+        ghFileSha=shaData.sha;
+        console.log('Got SHA:',ghFileSha);
+      }else{
+        const errBody=await shaRes.text().catch(()=>'');
+        throw new Error(`SHA fetch failed: ${shaRes.status} ${errBody.slice(0,100)}`);
+      }
     }
     const tr=currentTrip();
     const payload={
@@ -1033,16 +1040,17 @@ async function pushToGitHub(){
       body:JSON.stringify(body)
     });
     if(!res.ok){
-      const err=await res.json();
-      console.error('GitHub push failed:',err);
-      setSyncStatus('error',err.message||res.status);
+      let errText='';
+      try{const err=await res.json();errText=JSON.stringify(err);}catch(_){errText=await res.text().catch(()=>'');}
+      console.error('GitHub push failed — status:',res.status,'body:',errText);
+      setSyncStatus('error',`${res.status}: ${errText.slice(0,120)}`);
       return;
     }
     const data=await res.json();
     ghFileSha=data.content?.sha||ghFileSha;
     setSyncStatus('saved');
   }catch(e){
-    console.error('GitHub push error:',e);
+    console.error('GitHub push error — type:',e.name,'message:',e.message,'stack:',e.stack);
     setSyncStatus('error',e.message);
   }
 }
@@ -1052,10 +1060,10 @@ function setSyncStatus(status,msg=''){
   badge.className='sync-badge '+status;
   if(status==='saving')badge.innerHTML='<span class="sync-dot"></span>Saving…';
   else if(status==='saved')badge.innerHTML='✓ Saved';
-  else if(status==='error')badge.innerHTML='✗ Failed';
+  else if(status==='error'){badge.innerHTML='✗ Failed';if(msg)console.error('Sync error detail:',msg);}
   else if(status==='no-pat')badge.innerHTML='⚠ No PAT';
   else badge.innerHTML='';
-  badge.title=msg;
+  badge.title=msg||'';
 }
 function load(){
   const d=localStorage.getItem('triplan_data');
