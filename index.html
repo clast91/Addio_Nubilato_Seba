@@ -914,13 +914,13 @@ const pw = document.getElementById('lock-pw').value.trim();
         document.getElementById('lockscreen').style.display = 'none';
         document.getElementById('app').style.display = 'flex';
         
-        // Always load fresh data from GitHub repo
+        // Load from JSON
         loadRotaFromJSON();
     } else {
         document.getElementById('lock-error').textContent = 'Incorrect password';
+        document.getElementById('lock-pw').focus();
     }
-}
-  
+}  
 function enterApp(m){
   mode=m;
   document.getElementById('lockscreen').style.display='none';
@@ -2149,30 +2149,36 @@ document.getElementById('lock-pw').focus();
 // ─────────────────────────────────────────────────────────────────────────
 async function loadRotaFromJSON() {
     try {
-        const response = await fetch('The_Final_Rota.json');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        console.log("Fetching The_Final_Rota.json...");
+        const response = await fetch('The_Final_Rota.json', { cache: 'no-store' });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
         
         const data = await response.json();
-        
+        console.log("✅ JSON loaded:", data.trip?.name);
+
         if (data._triplan_export === "trip" && data.trip) {
-            // Load the trip and categories
-            state.trips = [data.trip];           // wrap as array
-            state.categories = data.categories || state.categories;
+            state.trips = [data.trip];
+            if (data.categories) state.categories = data.categories;
             
             currentTripId = data.trip.id;
             
             renderTripsGrid();
-            showTrips();                         // show the loaded trip
-            showToast('✅ The Final Rota loaded from GitHub');
+            showTrips();
             
-            console.log("Loaded from JSON:", data.trip.name);
+            showToast('✅ The Final Rota loaded successfully from GitHub');
+            console.log("Trip loaded with", data.trip.days.length, "days");
         } else {
-            showToast('JSON format not recognized');
+            showToast('JSON loaded but wrong format');
         }
     } catch (err) {
-        console.error(err);
-        showToast('❌ Could not load The_Final_Rota.json from GitHub');
-        // Optional fallback: initFromStorage();
+        console.error("Load failed:", err);
+        showToast('❌ Could not load JSON — check console');
+        
+        // Fallback: show empty state
+        renderTripsGrid();
     }
 }
 </script>
