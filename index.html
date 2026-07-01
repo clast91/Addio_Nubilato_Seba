@@ -380,7 +380,6 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 #mobile-day-bar select{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text);outline:none}
 /* ── Mobile Optimization ── */
 /* ── Mobile Optimization ── */
-/* ── Mobile Optimization ── */
 @media(max-width:700px){
   /* Hide sidebar */
   #sidebar{display:none !important}
@@ -389,12 +388,16 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
   #main{flex-direction:column}
   #views{flex:1}
   
-  /* Compact top navigation */
+  /* Fixed + Compact Top Navigation */
   #topnav{
+    position: sticky;
+    top: 0;
+    z-index: 1000;
     height:56px;
     padding:0 8px;
     gap:4px;
     overflow-x:auto;
+    background:var(--nav-bg);
   }
   
   #topnav .logo{font-size:15px}
@@ -412,11 +415,18 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
     font-size:13px;
   }
   
-  /* Mobile day bar */
+  /* Mobile day selector */
   #mobile-day-bar{display:flex; padding:8px 12px}
   
-  /* Day view */
-  #view-day{padding:16px 14px}
+  /* Day header sticky */
+  .day-header{
+    position:sticky;
+    top:56px;
+    background:var(--bg);
+    z-index:900;
+    padding:12px 0;
+    margin-bottom:12px;
+  }
   
   /* Activity tiles */
   .activity-tile{padding:14px 12px}
@@ -428,31 +438,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
   }
   .form-row{grid-template-columns:1fr}
   
-  /* Map fixes */
+  /* Map */
   #map-day-toggle{top:12px; z-index:1000}
   #map-container{height:calc(100% - 60px) !important}
-}    
-  #topnav .logo{font-size:16px}
-  .nav-btn{
-    padding:5px 8px;
-    font-size:12px;
-    gap:4px;
-  }
-  .nav-btn svg{width:14px;height:14px}
-  
-  /* Mobile day selector */
-  #mobile-day-bar{
-    display:flex;
-    padding:8px 12px;
-    background:var(--surface);
-    border-bottom:1px solid var(--border);
-  }
-  #mobile-day-select{
-    width:100%;
-    padding:8px 12px;
-    font-size:14px;
-    border-radius:8px;
-  }
+}
   
   /* Day view */
   #view-day{
@@ -537,6 +526,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
   
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1E2A35;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9000;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    /* Hide GitHub Pages bottom bar */
+body::after {
+  display: none !important;
+}
 </style>
 </head>
 <body>
