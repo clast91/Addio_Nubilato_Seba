@@ -1,0 +1,476 @@
+{
+  "_triplan_export": "trip",
+  "version": 2,
+  "trip": {
+    "id": "id_1782864530668_x16h9",
+    "name": "The Final Rota",
+    "startDate": "2026-10-02",
+    "days": [
+      {
+        "id": "id_1782770197199_wnybb",
+        "label": "Giorno 1 — Venerdì 2 Ottobre: Arrivo e Prima Serata",
+        "activities": [
+          {
+            "id": "id_1782770333565_7q31i",
+            "name": "Volo EasyJet EJU5449",
+            "catId": "cat8",
+            "time": "11:35",
+            "durationMin": 120,
+            "reserved": true,
+            "hideFromMap": true,
+            "location": "Aeroporto di Milano-Linate, Via Traversi",
+            "lat": 45.444205,
+            "lng": 9.277833,
+            "travelMin": 0,
+            "mapsLink": "",
+            "transportTags": [],
+            "routeNotes": "EasyJet EJU5449",
+            "notes": "Volo da Linate, partite carichi"
+          },
+          {
+            "id": "id_1782787775722_5tux5",
+            "name": "Arrivo a Lisbona",
+            "catId": "cat8",
+            "time": "13:30",
+            "durationMin": 0,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "Aeroporto di Lisbona, Alameda das Comunidades Portuguesas",
+            "lat": 38.780998,
+            "lng": -9.131861,
+            "travelMin": 20,
+            "mapsLink": "https://www.google.com/maps/dir/Aeroporto+di+Lisbona-Portela,+Alameda+das+Comunidades+Portuguesas,+1700-111+Lisboa,+Portogallo/Tv.+da+Queimada,+Bairro+Alto,+1200-365+Lisboa,+Portogallo/@38.7420734,-9.171818,13z/data=!3m1!4b1!4m14!4m13!1m5!1m1!1s0xd19324616d90183:0xa66a53e58036d46!2m2!1d-9.1319758!2d38.7788454!1m5!1m1!1s0xd19347f8aae7c5b:0x3e4012702ca3d4dc!2m2!1d-9.1441918!2d38.7129722!3e3?entry=ttu&g_ep=EgoyMDI2MDYyNC4wIKXMDSoASAFQAw%3D%3D",
+            "transportTags": [
+              "🚕 Taxi"
+            ],
+            "routeNotes": "",
+            "notes": "Taxi fino all'appartamento (~20 min) o trasporto pubblico (~1 ora). Indirizzo: Traversa da Queimada 46, Bairro Alto"
+          },
+          {
+            "id": "id_1782820190852_tbnnv",
+            "name": "Beer Bike — Tour in Bici con Birra, Sangria & Nano",
+            "catId": "cat6",
+            "time": "15:30",
+            "durationMin": 60,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "Bairro Alto / Centro di Lisbona",
+            "lat": 38.713392,
+            "lng": -9.145552,
+            "travelMin": 0,
+            "mapsLink": "",
+            "transportTags": [
+              "🚲 Bike"
+            ],
+            "routeNotes": "",
+            "notes": "Bici da 20 posti con barista e autista. Include birra, sangria, acqua e bibite analcoliche, musica, soste fotografiche e soprattutto un nano da intrattenimento"
+          },
+          {
+            "id": "d1a5",
+            "name": "Park Rooftop — Cocktail al Tramonto",
+            "catId": "cat2",
+            "time": "19:00",
+            "durationMin": 75,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "Calçada do Combro 58, Bairro Alto",
+            "lat": 38.7112,
+            "lng": -9.1457,
+            "travelMin": 10,
+            "mapsLink": "",
+            "transportTags": [
+              "🚶 Walking"
+            ],
+            "routeNotes": "10 min a piedi dall'appartamento",
+            "notes": "Bar sul tetto di un parcheggio al 6° piano cn vista panoramica a 360° su Tago e Ponte 25 Aprile"
+          },
+          {
+            "id": "d1a6",
+            "name": "Cena — A Nossa Casa",
+            "catId": "cat1",
+            "time": "20:30",
+            "durationMin": 120,
+            "reserved": true,
+            "hideFromMap": false,
+            "location": "R. da Atalaia 31, Bairro Alto",
+            "lat": 38.7118,
+            "lng": -9.1449,
+            "travelMin": 5,
+            "mapsLink": "",
+            "transportTags": [
+              "🚶 Walking"
+            ],
+            "routeNotes": "2 min a piedi dall'appartamento",
+            "notes": "Cucina portoghese-brasiliana"
+          },
+          {
+            "id": "d1a7",
+            "name": "Dopocena — Cais do Sodré / Pink Street",
+            "catId": "cat2",
+            "time": "23:00",
+            "durationMin": 90,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "Rua Nova do Carvalho (Pink Street), Cais do Sodré",
+            "lat": 38.7067,
+            "lng": -9.1441,
+            "travelMin": 10,
+            "mapsLink": "",
+            "transportTags": [
+              "🚶 Walking"
+            ],
+            "routeNotes": "10 min in discesa da Bairro Alto",
+            "notes": "Il cuore della movida notturna di Lisbona. Locali consigliati: Pensão Amor (ex bordello, cocktail bar con arredamento anni '70 voluttuoso), Sol e Pesca (negozio di pesca convertito in bar), By the Wine (bar con 3.200 bottiglie a muro)"
+          }
+        ],
+        "order": [
+          "id_1782770333565_7q31i",
+          "id_1782787775722_5tux5",
+          "id_1782820190852_tbnnv",
+          "d1a5",
+          "d1a6",
+          "d1a7"
+        ],
+        "lodging": null
+      },
+      {
+        "id": "id_1782770197199_z9f1d",
+        "label": "Giorno 2 — Sabato 3 Ottobre: Belém + Barca + Fado",
+        "activities": [
+          {
+            "id": "d2_pasteis",
+            "name": "Pastéis de Belém",
+            "catId": "cat2",
+            "time": "10:00",
+            "durationMin": 30,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "R. de Belém 84-92, Lisbona",
+            "lat": 38.6975,
+            "lng": -9.2032,
+            "travelMin": 20,
+            "mapsLink": "",
+            "transportTags": [
+              "🚕 Taxi"
+            ],
+            "routeNotes": "Taxi da Bairro Alto (~20 min)",
+            "notes": "Le famose pasticche di crema. Da qui si è già a Belém per il resto della mattina"
+          },
+          {
+            "id": "d2_torre",
+            "name": "Torre di Belém",
+            "catId": "cat4",
+            "time": "10:45",
+            "durationMin": 60,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "Av. Brasília, Belém, Lisbona",
+            "lat": 38.6916,
+            "lng": -9.2159,
+            "travelMin": 10,
+            "mapsLink": "",
+            "transportTags": [
+              "🚶 Walking"
+            ],
+            "routeNotes": "10 min a piedi dai Pastéis",
+            "notes": "Fortezza manuelina del XVI secolo che sorge direttamente dal Tago e monumento simbolo di Lisbona"
+          },
+          {
+            "id": "d2_lxfactory",
+            "name": "LX Factory",
+            "catId": "cat7",
+            "time": "12:00",
+            "durationMin": 60,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "R. Rodrigues de Faria 103, Lisbona",
+            "lat": 38.7035,
+            "lng": -9.1788,
+            "travelMin": 10,
+            "mapsLink": "",
+            "transportTags": [
+              "🚶 Walking"
+            ],
+            "routeNotes": "10 min a piedi dalla Torre",
+            "notes": "Hub creativo in una fabbrica industriale del XIX secolo. Include street art, negozi di design, bar e ristoranti. Giro veloce e drink pre-pranzo"
+          },
+          {
+            "id": "d2a2",
+            "name": "Pranzo sul Lungofiume a Belém",
+            "catId": "cat1",
+            "time": "13:15",
+            "durationMin": 75,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "Lungofiume di Belém / Alcântara, Lisbona",
+            "lat": 38.697,
+            "lng": -9.2,
+            "travelMin": 5,
+            "mapsLink": "",
+            "transportTags": [
+              "🚶 Walking"
+            ],
+            "routeNotes": "A piedi da LX Factory",
+            "notes": "Pranzo, posto da definire"
+          },
+          {
+            "id": "d2a_boatparty",
+            "name": "Tour Privato in Barca a Vela — Lisbona Boat Party",
+            "catId": "cat6",
+            "time": "15:00",
+            "durationMin": 120,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "Doca do Espanhol / Alcântara, Belém, Lisbona",
+            "lat": 38.6968,
+            "lng": -9.1945,
+            "travelMin": 10,
+            "mapsLink": "https://lisbonboatparty.com/tickets/sailing-boat/",
+            "transportTags": [
+              "🚶 Walking"
+            ],
+            "routeNotes": "Il punto esatto di imbarco viene confermato dopo la prenotazione",
+            "notes": "Barca a vela privata per 2 ore sul Tago. Partenza dalla zona Alcântara / Doca do Espanhol, a pochi minuti a piedi da LX Factory e dal pranzo"
+          },
+          {
+            "id": "d2a3",
+            "name": "Degustazione Vini — Lisbon Winery",
+            "catId": "cat2",
+            "time": "18:30",
+            "durationMin": 90,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "Lisbon Winery, zona Av. da Liberdade",
+            "lat": 38.7214,
+            "lng": -9.145,
+            "travelMin": 20,
+            "mapsLink": "",
+            "transportTags": [
+              "🚕 Taxi"
+            ],
+            "routeNotes": "Taxi da Belém al centro (~20 min)",
+            "notes": "Degustazione guidata di vini portoghesi e porto con salumi e formaggi"
+          },
+          {
+            "id": "d2_rubyrosa",
+            "name": "Ruby Rosa — Aperitivo Speakeasy Rooftop",
+            "catId": "cat2",
+            "time": "20:30",
+            "durationMin": 60,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "R. dos Sapateiros 158, Baixa, Lisbona",
+            "lat": 38.7105,
+            "lng": -9.1383,
+            "travelMin": 15,
+            "mapsLink": "",
+            "transportTags": [
+              "🚕 Taxi"
+            ],
+            "routeNotes": "",
+            "notes": "Bar rooftop speakeasy al 7° piano dell'Hotel Lisbon Art Stay. Vista panoramica a 360°. Cocktail creativi firmati dal bartender Alex Camargo. Da provare: 'Coconaughty' (pisco, cocco, lime, Fernet) o 'Mayhem Cooler' (bourbon, mezcal, habanero)"
+          },
+          {
+            "id": "d2a4",
+            "name": "Cena —  O Corrido",
+            "catId": "cat1",
+            "time": "21:30",
+            "durationMin": 180,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "Campo de Santa Clara 49, Alfama",
+            "lat": 38.7145,
+            "lng": -9.1247,
+            "travelMin": 15,
+            "mapsLink": "",
+            "transportTags": [
+              "🚕 Taxi"
+            ],
+            "routeNotes": "",
+            "notes": "Casa del fado intima vicino al Pantheon Nazionale. Il proprietario è il chitarrista principale"
+          }
+        ],
+        "order": [
+          "d2_pasteis",
+          "d2_torre",
+          "d2_lxfactory",
+          "d2a2",
+          "d2a_boatparty",
+          "d2a3",
+          "d2_rubyrosa",
+          "d2a4"
+        ],
+        "lodging": null
+      },
+      {
+        "id": "id_1782770197199_4ijnz",
+        "label": "Giorno 3 — Domenica 4 Ottobre: Brunch e Partenza",
+        "activities": [
+          {
+            "id": "d3a1",
+            "name": "Brunch — Zenith Chiado",
+            "catId": "cat2",
+            "time": "11:00",
+            "durationMin": 90,
+            "reserved": true,
+            "hideFromMap": false,
+            "location": "R. da Escola Politécnica 94, Príncipe Real, Lisbona",
+            "lat": 38.7172,
+            "lng": -9.1498,
+            "travelMin": 10,
+            "mapsLink": "",
+            "transportTags": [
+              "🚶 Walking"
+            ],
+            "routeNotes": "10 min a piedi dall'appartamento",
+            "notes": "Uno dei migliori brunch di Lisbona. Spazio generoso, adatto a gruppi"
+          },
+          {
+            "id": "d3a3",
+            "name": "Partenza per l'Aeroporto",
+            "catId": "cat8",
+            "time": "13:00",
+            "durationMin": 0,
+            "reserved": false,
+            "hideFromMap": false,
+            "location": "Aeroporto Humberto Delgado, Lisbona",
+            "lat": 38.7813,
+            "lng": -9.1359,
+            "travelMin": 25,
+            "mapsLink": "",
+            "transportTags": [
+              "🚕 Taxi"
+            ],
+            "routeNotes": "",
+            "notes": "Il volo di ritorno parte alle 14:00"
+          }
+        ],
+        "order": [
+          "d3a1",
+          "d3a3"
+        ],
+        "lodging": null
+      }
+    ],
+    "lodging": {
+      "name": "Lisbon Colours Bairro Alto",
+      "address": "46,48,48a",
+      "lat": 38.712871,
+      "lng": -9.144894,
+      "checkin": "",
+      "checkout": "",
+      "link": "",
+      "notes": ""
+    },
+    "expenses": [
+      {
+        "id": "id_1782903376440_5jrga",
+        "name": "Volo Personale",
+        "amount": 170,
+        "currency": "EUR",
+        "splitType": "pp",
+        "people": 1,
+        "category": "transport",
+        "dayIdx": null,
+        "notes": ""
+      },
+      {
+        "id": "id_1782903395173_6x1fe",
+        "name": "Volo Seba",
+        "amount": 170,
+        "currency": "EUR",
+        "splitType": "group",
+        "people": 11,
+        "category": "transport",
+        "dayIdx": null,
+        "notes": ""
+      },
+      {
+        "id": "id_1782903439989_ijjia",
+        "name": "Hotel",
+        "amount": 1764.06,
+        "currency": "EUR",
+        "splitType": "group",
+        "people": 11,
+        "category": "accommodation",
+        "dayIdx": null,
+        "notes": ""
+      },
+      {
+        "id": "id_1782903475656_fem3y",
+        "name": "Beer Bike",
+        "amount": 802,
+        "currency": "EUR",
+        "splitType": "group",
+        "people": 11,
+        "category": "activity",
+        "dayIdx": 0,
+        "notes": ""
+      },
+      {
+        "id": "id_1782903518489_lcjob",
+        "name": "Barca a vela",
+        "amount": 320,
+        "currency": "EUR",
+        "splitType": "group",
+        "people": 11,
+        "category": "activity",
+        "dayIdx": 1,
+        "notes": ""
+      },
+      {
+        "id": "id_1782906092375_odxgq",
+        "name": "Cena - O Corrido",
+        "amount": 780,
+        "currency": "EUR",
+        "splitType": "group",
+        "people": 11,
+        "category": "food",
+        "dayIdx": 1,
+        "notes": ""
+      }
+    ]
+  },
+  "categories": [
+    {
+      "id": "cat1",
+      "name": "Restaurant",
+      "color": "#C07A45"
+    },
+    {
+      "id": "cat2",
+      "name": "Bar / Café",
+      "color": "#7A8FB5"
+    },
+    {
+      "id": "cat3",
+      "name": "Museum",
+      "color": "#8A6FB0"
+    },
+    {
+      "id": "cat4",
+      "name": "Landmark",
+      "color": "#4A9E7A"
+    },
+    {
+      "id": "cat5",
+      "name": "Hotel",
+      "color": "#5A9BB5"
+    },
+    {
+      "id": "cat6",
+      "name": "Activity",
+      "color": "#C05A6A"
+    },
+    {
+      "id": "cat7",
+      "name": "Shopping",
+      "color": "#B09A40"
+    },
+    {
+      "id": "cat8",
+      "name": "Transport",
+      "color": "#708090"
+    }
+  ]
+}
